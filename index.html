@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="description" content="The Ada Foundation works with the people of Ada, Ghana, for education, health, clean water, livelihoods and a protected coast.">
-<title>Ada Foundation</title>
+<meta name="description" content="Ada Community Impact Foundation works with the people of Ada, Ghana, for education, health, clean water, livelihoods and a protected coast.">
+<title>Ada Community Impact Foundation</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
@@ -58,6 +58,8 @@ header.nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:10;backgroun
 .nav .wrap{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-block:14px}
 .brand{display:flex;align-items:center;gap:10px;font:700 19px/1 var(--display);text-decoration:none}
 .brand svg{flex:none}
+.brand span{line-height:1.1}
+@media (max-width:560px){.nav .brand{font-size:15px;max-width:15ch}}
 .nav ul{display:flex;gap:24px;list-style:none;margin:0;padding:0;font-weight:500;font-size:15px}
 .nav ul a{text-decoration:none;color:var(--muted)}
 .nav ul a:hover{color:var(--ink)}
@@ -174,13 +176,13 @@ footer a:hover{color:var(--band-fg)}
 <body>
 <header class="nav">
   <div class="wrap">
-    <a class="brand" href="#top" aria-label="Ada Foundation home">
+    <a class="brand" href="#top" aria-label="Ada Community Impact Foundation home">
       <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
         <circle cx="16" cy="16" r="15" fill="var(--river)"/>
         <circle cx="16" cy="13" r="5" fill="var(--sun)"/>
         <path d="M3 19c4-3 7 3 13 0s9 3 13 0v6a15 15 0 0 1-26 0z" fill="var(--salt)"/>
       </svg>
-      Ada Foundation
+      <span>Ada Community Impact Foundation</span>
     </a>
     <ul>
       <li><a href="#about">About Ada</a></li>
@@ -199,7 +201,7 @@ footer a:hover{color:var(--band-fg)}
         <div>
           <p class="eyebrow">Ada · Greater Accra Region · Ghana</p>
           <h1 style="margin-top:18px">Where the Volta meets the sea, <em>we lift Ada</em> together.</h1>
-          <p class="lede">The Ada Foundation works alongside the fishing, farming and salt-winning families of Ada to open doors in education, health, clean water and fair livelihoods, and to protect the coast that sustains us.</p>
+          <p class="lede">Ada Community Impact Foundation works alongside the fishing, farming and salt-winning families of Ada to open doors in education, health, clean water and fair livelihoods, and to protect the coast that sustains us.</p>
           <div class="ctas">
             <a class="btn btn-primary" href="#donate">Support a family</a>
             <a class="btn btn-ghost" href="#programs">See our work</a>
@@ -362,7 +364,7 @@ footer a:hover{color:var(--band-fg)}
   <div class="wrap">
     <div class="cols">
       <div>
-        <a class="brand" href="#top">Ada Foundation</a>
+        <a class="brand" href="#top">Ada Community Impact Foundation</a>
         <p style="margin-top:14px;max-width:40ch">Working with the people of Ada, Ghana, for education, health, clean water, livelihoods and a protected coast.</p>
       </div>
       <div>
