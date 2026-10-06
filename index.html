@@ -299,19 +299,19 @@ footer a:hover{color:var(--band-fg)}
     <div class="wrap donate">
       <div class="copy">
         <p class="eyebrow">Donate</p>
-        <h2>Every cedi reaches a family in Ada</h2>
-        <p>Give once or every month. Choose an amount to see what it can do on the ground.</p>
+        <h2>Every dollar reaches a family in Ada</h2>
+        <p>Give once or every month from anywhere in the US. Choose an amount to see what it can do on the ground.</p>
       </div>
       <div class="panel" aria-label="Choose a donation">
         <div class="seg" role="group" aria-label="Frequency">
           <button type="button" id="f-once" aria-pressed="true">One time</button>
           <button type="button" id="f-month" aria-pressed="false">Monthly</button>
         </div>
-        <div class="amounts" role="group" aria-label="Amount in Ghana cedis" id="amounts">
-          <button type="button" data-v="50" aria-pressed="false">₵50</button>
-          <button type="button" data-v="100" aria-pressed="true">₵100</button>
-          <button type="button" data-v="250" aria-pressed="false">₵250</button>
-          <button type="button" data-v="500" aria-pressed="false">₵500</button>
+        <div class="amounts" role="group" aria-label="Amount in US dollars" id="amounts">
+          <button type="button" data-v="25" aria-pressed="false">$25</button>
+          <button type="button" data-v="50" aria-pressed="true">$50</button>
+          <button type="button" data-v="100" aria-pressed="false">$100</button>
+          <button type="button" data-v="250" aria-pressed="false">$250</button>
         </div>
         <p class="impact" id="impact" aria-live="polite"></p>
         <button class="btn btn-primary" type="button" id="give" style="justify-content:center;padding:16px">Continue to give</button>
@@ -357,8 +357,8 @@ footer a:hover{color:var(--band-fg)}
         <p style="margin-top:14px;max-width:40ch">Working with the people of Ada, Ghana, for education, health, clean water, livelihoods and a protected coast.</p>
       </div>
       <div>
-        <h4>Visit</h4>
-        <ul><li>[Office address]</li><li>Ada Foah, Greater Accra Region</li><li>Ghana</li></ul>
+        <h4>Office</h4>
+        <ul><li>[Street address]</li><li>[City], Illinois</li><li>United States</li></ul>
       </div>
       <div>
         <h4>Contact</h4>
@@ -372,15 +372,15 @@ footer a:hover{color:var(--band-fg)}
 <script>
 (function(){
   var impacts = {
-    50:'can buy <strong>exercise books and pens</strong> for a pupil for a full term.',
-    100:'can supply <strong>treated bed nets</strong> for a family of five.',
-    250:'can cover <strong>a term of school fees and uniform</strong> for a student.',
-    500:'can fund <strong>a health outreach day</strong> on one of the Volta islands.'
+    25:'can buy <strong>exercise books and pens</strong> for a pupil for a full term.',
+    50:'can supply <strong>treated bed nets</strong> for a family of five.',
+    100:'can cover <strong>a term of books, uniform and exam fees</strong> for a student.',
+    250:'can fund <strong>a health outreach day</strong> on one of the Volta islands.'
   };
-  var amount = 100, monthly = false;
+  var amount = 50, monthly = false;
   var impactEl = document.getElementById('impact');
   function render(){
-    impactEl.innerHTML = '₵' + amount + (monthly ? ' a month ' : ' ') + impacts[amount];
+    impactEl.innerHTML = '$' + amount + (monthly ? ' a month ' : ' ') + impacts[amount];
   }
   document.getElementById('amounts').addEventListener('click', function(e){
     var b = e.target.closest('button'); if(!b) return;
