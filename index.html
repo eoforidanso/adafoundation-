@@ -307,8 +307,8 @@ footer a:hover{color:var(--band-fg)}
         <p class="eyebrow">Donate</p>
         <h2>Every dollar reaches a family in Ada</h2>
         <p>Give once or every month from anywhere in the US. Choose an amount to see what it can do on the ground.</p>
-        <p>Ada Foundation is a registered 501(c)(3) nonprofit, so your gift is tax-deductible to the extent allowed by law. PayPal emails you a receipt for your records.</p>
-        <span class="badge">501(c)(3) · EIN [XX-XXXXXXX]</span>
+        <p>Ada Community Impact Foundation is a registered 501(c)(3) nonprofit, so your gift is tax-deductible to the extent allowed by law. PayPal emails you a receipt for your records.</p>
+        <span class="badge">501(c)(3) · EIN 43-2211263</span>
       </div>
       <div class="panel" aria-label="Choose a donation">
         <div class="seg" role="group" aria-label="Frequency">
@@ -374,7 +374,7 @@ footer a:hover{color:var(--band-fg)}
         <ul><li>[Phone number]</li><li>[Email address]</li><li><a href="#volunteer">Volunteer with us</a></li></ul>
       </div>
     </div>
-    <div class="fine"><span>© 2026 Ada Foundation · A 501(c)(3) nonprofit organization · EIN [XX-XXXXXXX]</span><span>Together for Ada</span></div>
+    <div class="fine"><span>© 2026 Ada Community Impact Foundation · A 501(c)(3) nonprofit organization · EIN 43-2211263</span><span>Together for Ada</span></div>
   </div>
 </footer>
 
@@ -400,7 +400,7 @@ footer a:hover{color:var(--band-fg)}
     if (!PAYPAL_EMAIL) return '';
     return 'https://www.paypal.com/donate/?' + new URLSearchParams({
       business: PAYPAL_EMAIL, amount: String(amount), currency_code: 'USD',
-      item_name: 'Donation to Ada Foundation', no_recurring: '0'
+      item_name: 'Donation to Ada Community Impact Foundation', no_recurring: '0'
     }).toString();
   }
   function render(){
