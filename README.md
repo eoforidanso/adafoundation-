@@ -6,7 +6,6 @@ A single static page (`index.html`) with no build step. Open it in a browser, or
 
 ## Before going live
 
-- Replace the placeholder address, phone and email in the footer.
+- Donations are taken by Zelle at 773-329-3016; send donors a written receipt for gifts of $250 or more.
 - Replace the example 2030 goal figures with the foundation's own.
-- Turn on PayPal donations: in `index.html`, set `PAYPAL_EMAIL` (the PayPal account that receives gifts) or `PAYPAL_BUTTON_ID` (from paypal.com/donate/buttons). Until one is set, the button shows a "being set up" message.
 - Connect the volunteer form to a form service.

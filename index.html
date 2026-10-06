@@ -136,13 +136,7 @@ section{padding-block:clamp(64px,9vw,112px)}
 .amounts button[aria-pressed="true"]{border-color:var(--river);background:color-mix(in srgb,var(--river) 12%,transparent)}
 .impact{font-size:15px;color:var(--muted);min-height:3.2em;padding:14px 16px;background:var(--salt);border-radius:12px}
 .impact strong{color:var(--ink)}
-.btn-paypal{justify-content:center;padding:16px;background:#FFC439;color:#111;font-size:16px}
-.btn-paypal:hover{background:#F2BA36}
-.btn-paypal b{font:800 italic 17px/1 var(--body);letter-spacing:-.01em}
-.btn-paypal b span{color:#003087}.btn-paypal b span+span{color:#0070E0}
 .taxnote{font-size:13px;color:var(--muted);text-align:center}
-.or{display:flex;align-items:center;gap:12px;font:500 12px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
-.or::before,.or::after{content:"";flex:1;height:1px;background:var(--line)}
 .zelle{display:grid;gap:10px;padding:16px;border:1.5px solid var(--line);border-radius:14px}
 .zelle-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .zelle-head b{font:800 18px/1 var(--display);color:#6D1ED4}
@@ -365,7 +359,7 @@ footer a:hover{color:var(--band-fg)}
         <p class="eyebrow">Donate</p>
         <h2>Every dollar reaches a family in Ada</h2>
         <p>Give once or every month from anywhere in the US. Choose an amount to see what it can do on the ground.</p>
-        <p>Ada Community Impact Foundation is a registered 501(c)(3) nonprofit, so your gift is tax-deductible to the extent allowed by law. PayPal emails you a receipt for your records.</p>
+        <p>Ada Community Impact Foundation is a registered 501(c)(3) nonprofit, so your gift is tax-deductible to the extent allowed by law. Email us after you give and we will send a receipt for your records.</p>
         <ul class="deduct">
           <li>No goods or services are provided in exchange for your contribution, so the full amount is a charitable gift.</li>
           <li>If you itemize deductions (Schedule A), you can generally deduct the full amount of your gift.</li>
@@ -385,14 +379,10 @@ footer a:hover{color:var(--band-fg)}
           <button type="button" data-v="250" aria-pressed="false">$250</button>
         </div>
         <p class="impact" id="impact" aria-live="polite"></p>
-        <a class="btn btn-paypal" id="give" href="#donate" target="_blank" rel="noopener">Donate <span id="give-amt">$50</span> with <b><span>Pay</span><span>Pal</span></b></a>
-        <p class="impact" id="give-msg" hidden>PayPal giving is being set up. To give today, use Zelle below.</p>
-        <p class="taxnote" id="taxnote">Secure checkout on PayPal. Pay with a PayPal account or any debit or credit card.</p>
-        <div class="or">or</div>
         <div class="zelle">
-          <div class="zelle-head"><b>Zelle</b><span class="taxnote" style="text-align:right">No fees, straight from your bank app</span></div>
+          <div class="zelle-head"><b>Give with Zelle</b><span class="taxnote" style="text-align:right">No fees, straight from your bank app</span></div>
           <div class="zelle-num"><span id="zelle-number">773-329-3016</span><button class="copy" type="button" id="zelle-copy">Copy number</button></div>
-          <p>Send your gift to this number in your bank's Zelle app. For a tax receipt, email <strong>ACIF.org@gmail.com</strong> with your name, the date and the amount.</p>
+          <p>Send <strong id="zelle-amt">$50</strong> to this number in your bank's Zelle app.<span id="zelle-monthly" hidden> Most bank apps let you set a Zelle payment to repeat every month.</span> For a tax receipt, email <strong>ACIF.org@gmail.com</strong> with your name, the date and the amount.</p>
         </div>
       </div>
     </div>
@@ -440,7 +430,7 @@ footer a:hover{color:var(--band-fg)}
       </div>
       <div>
         <h4>Contact</h4>
-        <ul><li>[Phone number]</li><li><a href="mailto:ACIF.org@gmail.com" style="overflow-wrap:anywhere">ACIF.org@gmail.com</a></li><li><a href="#volunteer">Volunteer with us</a></li></ul>
+        <ul><li>773-329-3016</li><li><a href="mailto:ACIF.org@gmail.com" style="overflow-wrap:anywhere">ACIF.org@gmail.com</a></li><li><a href="#volunteer">Volunteer with us</a></li></ul>
       </div>
     </div>
     <div class="fine"><span>© 2026 Ada Community Impact Foundation · A 501(c)(3) nonprofit organization · EIN 43-2211263</span><span>Together for Ada</span></div>
@@ -449,11 +439,6 @@ footer a:hover{color:var(--band-fg)}
 
 <script>
 (function(){
-  // PayPal: set ONE of these. The email is the PayPal account that receives donations;
-  // the hosted button ID comes from paypal.com/donate/buttons (it ignores the amount picked here).
-  var PAYPAL_EMAIL = '';
-  var PAYPAL_BUTTON_ID = '';
-
   var impacts = {
     25:'can buy <strong>exercise books and pens</strong> for a pupil for a full term.',
     50:'can supply <strong>treated bed nets</strong> for a family of five.',
@@ -462,25 +447,10 @@ footer a:hover{color:var(--band-fg)}
   };
   var amount = 50, monthly = false;
   var impactEl = document.getElementById('impact');
-  var give = document.getElementById('give'), giveMsg = document.getElementById('give-msg');
-  var taxnote = document.getElementById('taxnote');
-  function paypalUrl(){
-    if (PAYPAL_BUTTON_ID) return 'https://www.paypal.com/donate/?hosted_button_id=' + encodeURIComponent(PAYPAL_BUTTON_ID);
-    if (!PAYPAL_EMAIL) return '';
-    return 'https://www.paypal.com/donate/?' + new URLSearchParams({
-      business: PAYPAL_EMAIL, amount: String(amount), currency_code: 'USD',
-      item_name: 'Donation to Ada Community Impact Foundation', no_recurring: '0'
-    }).toString();
-  }
   function render(){
     impactEl.innerHTML = '$' + amount + (monthly ? ' a month ' : ' ') + impacts[amount];
-    document.getElementById('give-amt').textContent = '$' + amount + (monthly ? '/mo' : '');
-    var url = paypalUrl();
-    give.href = url || '#donate';
-    if (url) give.setAttribute('target', '_blank'); else give.removeAttribute('target');
-    taxnote.textContent = monthly
-      ? 'On PayPal, tick "Make this a monthly donation" to give every month. Cancel any time from your PayPal account.'
-      : 'Secure checkout on PayPal. Pay with a PayPal account or any debit or credit card.';
+    document.getElementById('zelle-amt').textContent = '$' + amount + (monthly ? ' each month' : '');
+    document.getElementById('zelle-monthly').hidden = !monthly;
   }
   document.getElementById('amounts').addEventListener('click', function(e){
     var b = e.target.closest('button'); if(!b) return;
@@ -499,11 +469,6 @@ footer a:hover{color:var(--band-fg)}
     try { navigator.clipboard.writeText(num.textContent).then(done, fallback); } catch (e) { fallback(); }
   });
 
-  give.addEventListener('click', function(e){
-    if (paypalUrl()) return;
-    e.preventDefault();
-    giveMsg.hidden = false;
-  });
   render();
 
   var form = document.getElementById('vol-form'), status = document.getElementById('v-status');
