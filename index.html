@@ -78,6 +78,9 @@ header.nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:10;backgroun
 .hero .ctas{display:flex;flex-wrap:wrap;gap:12px;margin-top:32px}
 .coords{font:500 13px/1.7 var(--mono);color:var(--muted);border-left:2px solid var(--sun);padding-left:16px}
 .coords strong{color:var(--ink);font-weight:500}
+.coords .wiki{display:block;margin-top:10px}
+.coords .wiki a{color:var(--river);text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px}
+.coords .wiki a:hover{text-decoration-thickness:2px}
 .estuary{display:block;width:100%;height:auto;margin-top:clamp(40px,6vw,72px)}
 .estuary .w1{animation:drift 14s ease-in-out infinite alternate}
 .estuary .w2{animation:drift 18s ease-in-out infinite alternate-reverse}
@@ -134,6 +137,14 @@ section{padding-block:clamp(64px,9vw,112px)}
 .amounts{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
 .amounts button{border:1.5px solid var(--line);background:transparent;color:var(--ink);border-radius:12px;padding:14px 6px;font:700 18px/1 var(--display);cursor:pointer;font-variant-numeric:tabular-nums}
 .amounts button[aria-pressed="true"]{border-color:var(--river);background:color-mix(in srgb,var(--river) 12%,transparent)}
+.other{display:grid;gap:6px}
+.other label{font-size:14px;font-weight:600;color:var(--muted)}
+.money{display:flex;align-items:center;gap:6px;border:1.5px solid var(--line);border-radius:12px;padding-inline:14px;background:var(--surface)}
+.money:focus-within{border-color:var(--river)}
+.money span{font:700 18px/1 var(--display);color:var(--muted)}
+.money input{border:0;padding:13px 0;background:transparent;font:700 18px/1 var(--display);font-variant-numeric:tabular-nums;min-width:0}
+.money input:focus{outline:none}
+.money:has(input:focus-visible){outline:3px solid var(--sun);outline-offset:2px}
 .impact{font-size:15px;color:var(--muted);min-height:3.2em;padding:14px 16px;background:var(--salt);border-radius:12px}
 .impact strong{color:var(--ink)}
 .taxnote{font-size:13px;color:var(--muted);text-align:center}
@@ -153,7 +164,8 @@ section{padding-block:clamp(64px,9vw,112px)}
 
 
 /* Board */
-.board{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.board{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+@media (max-width:1060px){.board{grid-template-columns:repeat(2,1fr)}}
 .member{display:flex;align-items:center;gap:16px;padding:20px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);min-width:0}
 .avatar{flex:none;width:52px;height:52px;border-radius:50%;display:grid;place-items:center;font:700 18px/1 var(--display);color:var(--river);background:color-mix(in srgb,var(--river) 14%,transparent);box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--sun) 60%,transparent)}
 .who{display:grid;gap:2px;min-width:0}
@@ -242,6 +254,7 @@ footer a:hover{color:var(--band-fg)}
           Volta River estuary &amp; Songor Lagoon<br>
           Ada East &amp; Ada West Districts<br>
           Home of the Dangme-speaking Ada people
+          <span class="wiki">Learn more: <a href="https://en.wikipedia.org/wiki/Ada_Foah" target="_blank" rel="noopener">Ada Foah<span aria-hidden="true"> ↗</span></a> · <a href="https://en.wikipedia.org/wiki/Big_Ada" target="_blank" rel="noopener">Big Ada<span aria-hidden="true"> ↗</span></a> <span class="src">on Wikipedia</span></span>
         </div>
       </div>
     </div>
@@ -349,6 +362,8 @@ footer a:hover{color:var(--band-fg)}
         <li class="member"><span class="avatar" aria-hidden="true">LQ</span><span class="who"><strong>Linda Quarshie</strong><span>Director</span></span></li>
         <li class="member"><span class="avatar" aria-hidden="true">JH</span><span class="who"><strong>Jason Herrington</strong><span>Director</span></span></li>
         <li class="member"><span class="avatar" aria-hidden="true">DQ</span><span class="who"><strong>Duke Quarshie</strong><span>Director</span></span></li>
+        <li class="member"><span class="avatar" aria-hidden="true">NG</span><span class="who"><strong>Noah Gblekpo</strong><span>Director</span></span></li>
+        <li class="member"><span class="avatar" aria-hidden="true">VA</span><span class="who"><strong>Vivian Acheampong</strong><span>Director</span></span></li>
       </ul>
     </div>
   </section>
@@ -377,6 +392,10 @@ footer a:hover{color:var(--band-fg)}
           <button type="button" data-v="50" aria-pressed="true">$50</button>
           <button type="button" data-v="100" aria-pressed="false">$100</button>
           <button type="button" data-v="250" aria-pressed="false">$250</button>
+        </div>
+        <div class="other">
+          <label for="other-amt">Or enter your own amount</label>
+          <div class="money"><span aria-hidden="true">$</span><input id="other-amt" type="number" inputmode="decimal" min="1" step="1" placeholder="Any amount"></div>
         </div>
         <p class="impact" id="impact" aria-live="polite"></p>
         <div class="zelle">
@@ -447,15 +466,31 @@ footer a:hover{color:var(--band-fg)}
   };
   var amount = 50, monthly = false;
   var impactEl = document.getElementById('impact');
+  function impactFor(v){
+    var tiers = [250, 100, 50, 25];
+    for (var i = 0; i < tiers.length; i++) if (v >= tiers[i]) return impacts[tiers[i]];
+    return 'goes straight to <strong>school supplies, health outreach and clean water</strong> in Ada.';
+  }
+  function money(v){ return '$' + v.toLocaleString('en-US', {maximumFractionDigits: 2}); }
   function render(){
-    impactEl.innerHTML = '$' + amount + (monthly ? ' a month ' : ' ') + impacts[amount];
-    document.getElementById('zelle-amt').textContent = '$' + amount + (monthly ? ' each month' : '');
+    if (!(amount > 0)) { impactEl.textContent = 'Enter an amount to see what it can do.'; document.getElementById('zelle-amt').textContent = 'your gift'; document.getElementById('zelle-monthly').hidden = !monthly; return; }
+    impactEl.innerHTML = money(amount) + (monthly ? ' a month ' : ' ') + impactFor(amount);
+    document.getElementById('zelle-amt').textContent = money(amount) + (monthly ? ' each month' : '');
     document.getElementById('zelle-monthly').hidden = !monthly;
   }
   document.getElementById('amounts').addEventListener('click', function(e){
     var b = e.target.closest('button'); if(!b) return;
     amount = +b.dataset.v;
     this.querySelectorAll('button').forEach(function(x){x.setAttribute('aria-pressed', x===b)});
+    otherEl.value = '';
+    render();
+  });
+  var otherEl = document.getElementById('other-amt');
+  otherEl.addEventListener('input', function(){
+    var v = parseFloat(otherEl.value);
+    document.querySelectorAll('#amounts button').forEach(function(x){ x.setAttribute('aria-pressed', 'false'); });
+    if (otherEl.value === '') { amount = 50; document.querySelector('#amounts [data-v="50"]').setAttribute('aria-pressed', 'true'); }
+    else amount = v > 0 ? Math.round(v * 100) / 100 : 0;
     render();
   });
   var once = document.getElementById('f-once'), month = document.getElementById('f-month');
