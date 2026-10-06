@@ -175,15 +175,24 @@ textarea{min-height:110px;resize:vertical}
 @media (max-width:520px){form{grid-template-columns:1fr}}
 
 /* Footer */
-footer{background:var(--band);color:var(--band-muted);padding-block:56px 40px;font-size:15px}
+footer{background:var(--band);color:var(--band-muted);padding-block:56px 40px;font-size:15px;line-height:1.5}
 footer .cols{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:32px}
 footer h4{font:500 12px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--sun);margin:0 0 14px}
 footer .brand{color:var(--band-fg)}
-footer ul{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+footer ul{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+footer .about{min-width:0}
+footer .about p{margin-top:12px;max-width:40ch}
 footer a{text-decoration:none}
 footer a:hover{color:var(--band-fg)}
 .fine{margin-top:40px;padding-top:20px;border-top:1px solid color-mix(in srgb,var(--band-fg) 14%,transparent);display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;font-size:13px}
-@media (max-width:720px){footer .cols{grid-template-columns:1fr}}
+@media (max-width:720px){
+  footer{padding-block:44px 28px}
+  footer .cols{grid-template-columns:1fr 1fr;gap:28px 20px}
+  footer .about{grid-column:1/-1}
+  footer h4{margin-bottom:10px}
+  .fine{flex-direction:column;align-items:flex-start;gap:6px;margin-top:32px}
+}
+@media (max-width:360px){footer .cols{grid-template-columns:1fr}}
 </style>
 
 </head>
@@ -403,9 +412,9 @@ footer a:hover{color:var(--band-fg)}
 <footer>
   <div class="wrap">
     <div class="cols">
-      <div>
+      <div class="about">
         <a class="brand" href="#top">Ada Community Impact Foundation</a>
-        <p style="margin-top:14px;max-width:40ch">Working with the people of Ada, Ghana, for education, health, clean water, livelihoods and a protected coast.</p>
+        <p>Working with the people of Ada, Ghana, for education, health, clean water, livelihoods and a protected coast.</p>
       </div>
       <div>
         <h4>Office</h4>
