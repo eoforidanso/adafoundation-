@@ -244,7 +244,7 @@ function oneLine(text) {
 
 async function alertRecipients(env) {
   const row = await env.DB.prepare("SELECT value FROM settings WHERE key = 'alert_email'").first();
-  return String(row?.value || '').split(',').map((s) => s.trim()).filter((s) => /^\S+@\S+\.\S+$/.test(s)).slice(0, 5);
+  return String(row?.value || '').split(',').map((s) => s.trim().toLowerCase()).filter((s) => /^\S+@\S+\.\S+$/.test(s)).slice(0, 5);
 }
 
 async function volunteerAlert(env, v) {
