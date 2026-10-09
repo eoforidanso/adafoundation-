@@ -15,6 +15,8 @@ The foundation manages the site at https://adacommunityimpactfoundation.org/admi
 - **Volunteers**: sign-ups from the "Get involved" form, with status tracking and spreadsheet export
 - **Donations & receipts**: record Zelle, check or cash gifts and produce IRS-compliant receipts
 - **Site details**: headline, introduction, phone, Zelle, email and city
+- **Email alerts**: an email to the address under Site details each time someone signs up to volunteer
+  (sent from alerts@adacommunityimpactfoundation.org through Cloudflare Email Sending)
 
 Content lives in the Cloudflare D1 database `acif`; uploaded photos live in the R2 bucket `acif-photos`.
 `index.html` keeps the original content as a fallback; the worker (`src/worker.js`) fills in the latest

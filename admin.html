@@ -636,6 +636,9 @@ td .msgtext{max-width:42ch;white-space:pre-wrap;color:var(--muted)}
         f('zelle', 'Zelle number or email', 'Shown in the Donate section.', 'maxlength="40"') +
         f('email', 'Email address', '', 'type="email" maxlength="160"') +
         f('city', 'City', 'Shown in the footer.', 'maxlength="80"') +
+      '</div><h3 style="margin-top:24px">Email alerts</h3><div class="stack">' +
+        f('alert_email', 'Send volunteer sign-up alerts to', 'An email arrives here each time someone fills in the volunteer form. Separate more than one address with commas. Leave empty to turn alerts off.', 'maxlength="300" placeholder="ACIF.org@gmail.com"') +
+        '<div class="row"><button class="btn btn-ghost btn-sm" type="button" data-action="test-email">Send a test email</button><span class="hint">Save first, then send a test to check alerts arrive.</span></div>' +
       '</div><div class="row" style="margin-top:18px"><button class="btn btn-primary" type="submit">Save changes</button></div></form>' +
       '<div class="card"><h3>Changing the dashboard password</h3><p class="hint" style="font-size:14px">For security the password is stored with Cloudflare, not in this dashboard. To change it, open Terminal on the computer that manages the website and run:</p>' +
         '<pre style="background:var(--bg);padding:12px 14px;border-radius:10px;overflow-x:auto;font:500 13px/1.6 var(--mono)">cd ~/Desktop/vscode/adafoundation\nnpx wrangler secret put ADMIN_PASSWORD</pre><p class="hint" style="font-size:14px">Type the new password when asked. Everyone signed in will be signed out.</p></div>';
@@ -643,7 +646,7 @@ td .msgtext{max-width:42ch;white-space:pre-wrap;color:var(--muted)}
   AFTER.settings = function(){
     $('#settings-form').addEventListener('submit', function(e){
       e.preventDefault();
-      var body = {}; ['headline','lede','phone','zelle','email','city'].forEach(function(k){ body[k] = $('#s-' + k).value; });
+      var body = {}; ['headline','lede','phone','zelle','email','city','alert_email'].forEach(function(k){ body[k] = $('#s-' + k).value; });
       call('PUT', '/api/admin/settings', body).then(function(s){ state.settings = s; toast('Saved. The website is updated.'); }).catch(fail);
     });
   };
@@ -698,6 +701,11 @@ td .msgtext{max-width:42ch;white-space:pre-wrap;color:var(--muted)}
         ['Email', function(d){ return d.donor_email; }], ['Amount (USD)', function(d){ return (d.amount_cents / 100).toFixed(2); }],
         ['Method', function(d){ return d.method; }], ['Note', function(d){ return d.note; }]
       ]));
+    },
+    'test-email': function(el){
+      el.disabled = true; el.textContent = 'Sending...';
+      call('POST', '/api/admin/test-email').then(function(r){ toast('Test email sent to ' + r.to.join(', ') + '. Check the inbox and spam folder.'); })
+        .catch(fail).then(function(){ el.disabled = false; el.textContent = 'Send a test email'; });
     },
     receipt: function(el){ openReceipt(Number(el.dataset.id)); },
     'close-receipt': function(){ $('#receipt-modal').hidden = true; },

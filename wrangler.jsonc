@@ -12,6 +12,10 @@
   "d1_databases": [
     { "binding": "DB", "database_name": "acif", "database_id": "25e91f12-c834-4d7a-8c50-082ee8889f21", "migrations_dir": "migrations" }
   ],
+  // Volunteer sign-up alerts (Cloudflare Email Sending).
+  "send_email": [
+    { "name": "EMAIL" }
+  ],
   "r2_buckets": [
     { "binding": "MEDIA", "bucket_name": "acif-photos" }
   ],

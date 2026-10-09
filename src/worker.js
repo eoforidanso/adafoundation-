@@ -2,12 +2,15 @@
 //
 // Bindings (wrangler.jsonc): ASSETS (static files), DB (D1), MEDIA (R2).
 // Secrets: ADMIN_PASSWORD (set by the foundation), SESSION_SECRET (random).
+// Optional: EMAIL (send_email binding) for volunteer sign-up alerts.
 
 const SESSION_COOKIE = 'acif_session';
 const SESSION_HOURS = 12;
 const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
 const IMAGE_TYPES = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif' };
 const DEFAULT_HERO = '/images/hero-canoes.jpg';
+const ALERT_FROM = { email: 'alerts@adacommunityimpactfoundation.org', name: 'ACIF Website' };
+const SITE_URL = 'https://adacommunityimpactfoundation.org';
 
 // Field rules for each table the dashboard can edit.
 const TABLES = {
@@ -44,14 +47,14 @@ const TABLES = {
   },
 };
 
-const SETTINGS = { headline: 160, lede: 600, phone: 40, zelle: 40, email: 160, city: 80 };
+const SETTINGS = { headline: 160, lede: 600, phone: 40, zelle: 40, email: 160, city: 80, alert_email: 300 };
 
 export default {
-  async fetch(req, env) {
+  async fetch(req, env, ctx) {
     const url = new URL(req.url);
     const path = url.pathname;
     try {
-      if (path.startsWith('/api/')) return await api(req, env, url);
+      if (path.startsWith('/api/')) return await api(req, env, url, ctx);
       if (path.startsWith('/media/')) return await media(env, decodeURIComponent(path.slice(7)));
       if (path === '/' || path === '/index.html') return await renderHome(req, env);
       return env.ASSETS.fetch(req);
@@ -148,11 +151,11 @@ function sessionCookie(value, maxAge) {
 
 /* ---------- API ---------- */
 
-async function api(req, env, url) {
+async function api(req, env, url, ctx) {
   const path = url.pathname;
   const method = req.method;
 
-  if (path === '/api/volunteer' && method === 'POST') return volunteerSignup(req, env);
+  if (path === '/api/volunteer' && method === 'POST') return volunteerSignup(req, env, ctx);
   if (path === '/api/login' && method === 'POST') return login(req, env);
   if (path === '/api/logout' && method === 'POST') return json({ ok: true }, 200, { 'set-cookie': sessionCookie('', 0) });
 
@@ -170,6 +173,7 @@ async function api(req, env, url) {
   if (parts[0] === 'all' && method === 'GET') return json(await loadAll(env));
   if (parts[0] === 'upload' && method === 'POST') return upload(req, env);
   if (parts[0] === 'settings' && method === 'PUT') return saveSettings(req, env);
+  if (parts[0] === 'test-email' && method === 'POST') return testEmail(env);
 
   const table = TABLES[parts[0]];
   if (!table) return json({ error: 'Not found.' }, 404);
@@ -208,22 +212,84 @@ async function login(req, env) {
   return json({ ok: true }, 200, { 'set-cookie': sessionCookie(await makeSession(env), SESSION_HOURS * 3600) });
 }
 
-async function volunteerSignup(req, env) {
+async function volunteerSignup(req, env, ctx) {
   const b = await readJson(req);
   if (!b) return json({ error: 'Please fill in the form and try again.' }, 400);
   if (b.website) return json({ ok: true }); // honeypot: bots fill hidden fields
-  const name = String(b.name || '').trim().slice(0, 100);
-  const email = String(b.email || '').trim().slice(0, 160);
+  const name = oneLine(b.name).slice(0, 100);
+  const email = oneLine(b.email).slice(0, 160);
   if (!name || !/^\S+@\S+\.\S+$/.test(email)) return json({ error: 'Please add your name and a valid email address so we can reply.' }, 400);
 
   const who = await ipHash(req, env);
   const recent = await env.DB.prepare('SELECT COUNT(*) AS n FROM volunteers WHERE ip_hash = ? AND created_at > ?').bind(who, Date.now() - 3600e3).first();
   if (recent.n >= 5) return json({ error: 'We already have your details. Thank you, we will be in touch.' }, 429);
 
+  const signup = {
+    name, email, phone: oneLine(b.phone).slice(0, 40),
+    area: oneLine(b.area).slice(0, 80), message: String(b.message || '').trim().slice(0, 2000),
+  };
   await env.DB.prepare('INSERT INTO volunteers (name, email, phone, area, message, ip_hash, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
-    .bind(name, email, String(b.phone || '').trim().slice(0, 40), String(b.area || '').slice(0, 80), String(b.message || '').trim().slice(0, 2000), who, Date.now())
+    .bind(signup.name, signup.email, signup.phone, signup.area, signup.message, who, Date.now())
     .run();
+  // The sign-up is already saved; the alert is best effort and never blocks the visitor.
+  ctx.waitUntil(volunteerAlert(env, signup).catch((err) => console.error('Volunteer alert failed:', err.code || '', err.message)));
   return json({ ok: true });
+}
+
+/* ---------- email alerts ---------- */
+
+function oneLine(text) {
+  return String(text || '').replace(/[\r\n]+/g, ' ').trim();
+}
+
+async function alertRecipients(env) {
+  const row = await env.DB.prepare("SELECT value FROM settings WHERE key = 'alert_email'").first();
+  return String(row?.value || '').split(',').map((s) => s.trim()).filter((s) => /^\S+@\S+\.\S+$/.test(s)).slice(0, 5);
+}
+
+async function volunteerAlert(env, v) {
+  if (!env.EMAIL) return;
+  const to = await alertRecipients(env);
+  if (!to.length) return;
+  const rows = [['Name', v.name], ['Email', v.email], ['Phone', v.phone || 'Not given'], ['Wants to help with', v.area || 'Not given']];
+  const text = 'Someone signed up to volunteer on the website.\n\n' +
+    rows.map(([k, val]) => `${k}: ${val}`).join('\n') +
+    `\n\nMessage:\n${v.message || '(none)'}\n\nReply to this email to answer ${v.name} directly.\nSee all sign-ups: ${SITE_URL}/admin#volunteers\n`;
+  const html = '<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.5;color:#0C2A30;max-width:560px">' +
+    '<p style="margin:0 0 4px;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:#0B7F86">Ada Community Impact Foundation</p>' +
+    '<h2 style="margin:0 0 16px;font-size:22px">New volunteer sign-up</h2>' +
+    '<table style="border-collapse:collapse;width:100%">' +
+    rows.map(([k, val]) => `<tr><td style="padding:6px 12px 6px 0;color:#4D6A70;white-space:nowrap;vertical-align:top">${esc(k)}</td><td style="padding:6px 0;font-weight:600">${esc(val)}</td></tr>`).join('') +
+    '</table>' +
+    (v.message ? `<p style="margin:16px 0 4px;color:#4D6A70">Message</p><p style="margin:0;white-space:pre-wrap;background:#F5EFE6;padding:12px 14px;border-radius:8px">${esc(v.message)}</p>` : '') +
+    `<p style="margin:20px 0 0">Reply to this email to answer ${esc(v.name)} directly, or <a href="${SITE_URL}/admin#volunteers" style="color:#0B7F86">see all sign-ups in the dashboard</a>.</p></div>`;
+  await env.EMAIL.send({
+    to, from: ALERT_FROM, replyTo: { email: v.email, name: oneLine(v.name) },
+    subject: oneLine(`New volunteer: ${v.name}${v.area ? ` (${v.area})` : ''}`).slice(0, 150),
+    text, html,
+  });
+}
+
+async function testEmail(env) {
+  if (!env.EMAIL) return json({ error: 'Email sending is not connected to the website yet.' }, 503);
+  const to = await alertRecipients(env);
+  if (!to.length) return json({ error: 'Add an address under "Send sign-up alerts to" and save first.' }, 400);
+  try {
+    await env.EMAIL.send({
+      to, from: ALERT_FROM, subject: 'Test alert from your website',
+      text: `This is a test. Volunteer sign-up alerts from ${SITE_URL} will arrive at this address.\n`,
+      html: `<p style="font-family:Arial,Helvetica,sans-serif;font-size:15px">This is a test. Volunteer sign-up alerts from <a href="${SITE_URL}">${SITE_URL.replace('https://', '')}</a> will arrive at this address.</p>`,
+    });
+  } catch (err) {
+    const why = {
+      E_SENDER_DOMAIN_NOT_AVAILABLE: 'Email Sending is not switched on for adacommunityimpactfoundation.org yet. Finish the setup in the Cloudflare dashboard.',
+      E_SENDER_NOT_VERIFIED: 'Cloudflare is still verifying the domain for sending. Try again in a few minutes.',
+      E_DAILY_LIMIT_EXCEEDED: 'The daily email limit has been reached. Try again tomorrow.',
+      E_RATE_LIMIT_EXCEEDED: 'Too many emails at once. Try again in a minute.',
+    }[err.code];
+    return json({ error: why || `The email could not be sent (${err.code || err.message}).` }, 502);
+  }
+  return json({ ok: true, to });
 }
 
 async function loadAll(env) {
@@ -341,6 +407,9 @@ async function saveSettings(req, env) {
     const v = String(body[key] ?? '').trim();
     if (v.length > max) return json({ error: `${key} is too long (${max} characters max).` }, 400);
     if (key === 'email' && v && !/^\S+@\S+\.\S+$/.test(v)) return json({ error: 'That email address does not look right.' }, 400);
+    if (key === 'alert_email' && v && v.split(',').some((a) => !/^\S+@\S+\.\S+$/.test(a.trim()))) {
+      return json({ error: 'Check the alert addresses. Separate more than one with commas.' }, 400);
+    }
     stmts.push(env.DB.prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').bind(key, v));
   }
   if (stmts.length) await env.DB.batch(stmts);
