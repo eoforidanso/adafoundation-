@@ -16,13 +16,16 @@ const SITE_URL = 'https://adacommunityimpactfoundation.org';
 const TABLES = {
   directors: {
     order: 'sort, id', sortable: true,
-    fields: { name: { max: 80, required: true }, title: { max: 60 }, photo: { src: true }, sort: { int: true } },
+    fields: { name: { max: 80, required: true }, title: { max: 60 }, photo: { src: true }, sort: { int: true },
+      focus_x: { int: true, min: 0, max: 100 }, focus_y: { int: true, min: 0, max: 100 }, zoom: { int: true, min: 100, max: 300 },
+    },
   },
   photos: {
     order: 'sort, id', sortable: true,
     fields: {
       src: { src: true, required: true }, caption: { max: 120 }, alt: { max: 200 },
       credit: { max: 300 }, credit_url: { url: true }, placement: { oneOf: ['gallery', 'hero', 'hidden'] }, sort: { int: true },
+      focus_x: { int: true, min: 0, max: 100 }, focus_y: { int: true, min: 0, max: 100 }, zoom: { int: true, min: 100, max: 300 },
     },
   },
   goals: {
@@ -317,7 +320,9 @@ function validate(rules, body, partial) {
     let v = body[field];
     if (rule.int) {
       v = Number(v);
-      if (!Number.isInteger(v) || (rule.min != null && v < rule.min)) return { error: `${field.replace(/_/g, ' ')} must be a whole number.` };
+      if (!Number.isInteger(v) || (rule.min != null && v < rule.min) || (rule.max != null && v > rule.max)) {
+        return { error: `${field.replace(/_/g, ' ')} is out of range.` };
+      }
     } else if (rule.bool) {
       v = v ? 1 : 0;
     } else {
@@ -444,6 +449,14 @@ async function media(env, key) {
 
 /* ---------- public page ---------- */
 
+// Inline style that keeps the chosen part of a photo in view at any size.
+function framing(row) {
+  const x = Number.isInteger(row.focus_x) ? row.focus_x : 50;
+  const y = Number.isInteger(row.focus_y) ? row.focus_y : 50;
+  const z = Number.isInteger(row.zoom) ? row.zoom : 100;
+  return `object-position:${x}% ${y}%` + (z > 100 ? `;transform:scale(${z / 100});transform-origin:${x}% ${y}%` : '');
+}
+
 function initials(name) {
   return name.split(/\s+/).filter(Boolean).map((w) => w[0]).join('').slice(0, 3).toUpperCase();
 }
@@ -476,7 +489,7 @@ async function renderHome(req, env) {
 
   const boardHtml = directors.map((d) =>
     `<li class="member">${d.photo
-      ? `<img class="avatar avatar-img" src="${esc(d.photo)}" alt="" loading="lazy" width="52" height="52">`
+      ? `<span class="avatar avatar-photo"><img src="${esc(d.photo)}" alt="" loading="lazy" width="52" height="52" style="${framing(d)}"></span>`
       : `<span class="avatar" aria-hidden="true">${esc(initials(d.name))}</span>`}<span class="who"><strong>${esc(d.name)}</strong><span>${esc(d.title)}</span></span></li>`
   ).join('');
 
@@ -490,7 +503,7 @@ async function renderHome(req, env) {
     : 'These are our targets for 2030. We will report progress against each one, every year.';
 
   const galleryHtml = gallery.map((p) =>
-    `<figure class="ph"><img src="${esc(p.src)}" alt="${esc(p.alt)}" loading="lazy">${p.caption ? `<figcaption>${esc(p.caption)}</figcaption>` : ''}</figure>`
+    `<figure class="ph"><img src="${esc(p.src)}" alt="${esc(p.alt)}" loading="lazy" style="${framing(p)}">${p.caption ? `<figcaption>${esc(p.caption)}</figcaption>` : ''}</figure>`
   ).join('');
 
   const newsHtml = news.map((n) =>
@@ -513,6 +526,7 @@ async function renderHome(req, env) {
     .on('[data-slot="hero-img"]', set(hero, (el) => {
       el.setAttribute('src', hero.src);
       el.setAttribute('alt', hero.alt || '');
+      el.setAttribute('style', framing(hero));
       if (hero.src !== DEFAULT_HERO) { el.removeAttribute('srcset'); el.removeAttribute('sizes'); }
     }))
     .on('[data-slot="gallery"]', {

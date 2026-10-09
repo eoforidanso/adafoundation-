@@ -182,6 +182,26 @@ td .msgtext{max-width:42ch;white-space:pre-wrap;color:var(--muted)}
 .receipt dd{margin:0;font-weight:600}
 .receipt .statement{border-top:1px solid #E2DACD;padding-top:14px;margin-top:14px}
 
+/* Framing editor */
+.frame-card{width:min(860px,100%)}
+.frame-layout{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:20px;align-items:start}
+.stage{position:relative;overflow:hidden;border-radius:12px;background:#0C2A30;touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none;max-width:100%}
+.stage.dragging{cursor:grabbing}
+.stage img{position:absolute;inset:0;width:100%;height:100%;max-width:none;object-fit:cover;pointer-events:none;-webkit-user-drag:none}
+.stage::after{content:"";position:absolute;inset:0;border-radius:inherit;box-shadow:inset 0 0 0 1px #ffffff26;pointer-events:none}
+.shape-wide{aspect-ratio:16/10}
+.shape-tall{aspect-ratio:9/18;max-height:62vh;margin-inline:auto}
+.shape-4x3{aspect-ratio:4/3}
+.shape-circle{aspect-ratio:1;border-radius:50%;width:min(300px,100%);margin-inline:auto}
+.previews{display:grid;gap:14px;justify-items:center}
+.preview{display:grid;gap:6px;justify-items:center;font-size:12px;color:var(--muted);text-align:center}
+.preview .stage{cursor:default}
+.preview .shape-wide{width:170px}
+.preview .shape-tall{width:84px}
+.preview .shape-4x3{width:150px}
+input[type="range"]{padding:0;border:0;accent-color:var(--river)}
+@media (max-width:720px){.frame-layout{grid-template-columns:1fr}.previews{grid-auto-flow:column;justify-content:start;align-items:end}}
+
 /* Toast */
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:30;background:var(--ink);color:var(--bg);padding:12px 18px;border-radius:12px;font-weight:500;box-shadow:0 8px 30px #0003;max-width:calc(100% - 32px)}
 .toast.bad{background:var(--bad);color:#fff}
@@ -230,6 +250,7 @@ td .msgtext{max-width:42ch;white-space:pre-wrap;color:var(--muted)}
 </div>
 
 <div class="modal" id="receipt-modal" hidden></div>
+<div class="modal" id="frame-modal" hidden></div>
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
 <script>
@@ -260,6 +281,10 @@ td .msgtext{max-width:42ch;white-space:pre-wrap;color:var(--muted)}
     var p = iso.split('-').map(Number);
     return new Date(p[0], p[1]-1, p[2]).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   }
+  function frameStyle(x, y, z){
+    return 'object-position:' + x + '% ' + y + '%' + (z > 100 ? ';transform:scale(' + (z / 100) + ');transform-origin:' + x + '% ' + y + '%' : '');
+  }
+  function rowFrame(r){ return frameStyle(r.focus_x == null ? 50 : r.focus_x, r.focus_y == null ? 50 : r.focus_y, r.zoom == null ? 100 : r.zoom); }
   function receiptNo(d){ return 'ACIF-' + String(d.gift_date).slice(0,4) + '-' + String(d.id).padStart(4,'0'); }
 
   var toastTimer;
@@ -429,7 +454,7 @@ td .msgtext{max-width:42ch;white-space:pre-wrap;color:var(--muted)}
       var cls = p.placement === 'hero' ? ' is-hero' : p.placement === 'hidden' ? ' is-hidden' : '';
       var tag = p.placement === 'hero' ? '<span class="tag">Main banner</span>' : p.placement === 'hidden' ? '<span class="tag muted">Hidden</span>' : '';
       return '<div class="photo-card' + cls + '">' +
-        '<div class="thumb"><img src="' + esc(p.src) + '" alt="" loading="lazy">' + tag + '</div>' +
+        '<div class="thumb"><img src="' + esc(p.src) + '" alt="" loading="lazy" style="' + rowFrame(p) + '">' + tag + '</div>' +
         '<div class="body">' +
           '<div class="field"><label for="ph-cap-' + p.id + '">Caption</label><input id="ph-cap-' + p.id + '" value="' + esc(p.caption) + '" maxlength="120" data-save="photos:' + p.id + ':caption" placeholder="Shown on the photo"></div>' +
           '<div class="field"><label for="ph-alt-' + p.id + '">Description for screen readers</label><input id="ph-alt-' + p.id + '" value="' + esc(p.alt) + '" maxlength="200" data-save="photos:' + p.id + ':alt" placeholder="What is in the photo?"></div>' +
@@ -441,7 +466,8 @@ td .msgtext{max-width:42ch;white-space:pre-wrap;color:var(--muted)}
             '<div class="field"><label for="ph-cu-' + p.id + '">Credit link</label><input id="ph-cu-' + p.id + '" value="' + esc(p.credit_url) + '" maxlength="300" data-save="photos:' + p.id + ':credit_url" placeholder="https://"></div>' +
           '</div></details>' +
         '</div>' +
-        '<div class="actions"><div class="row">' + moveButtons('photos', p.id, i, photos.length) + '</div>' +
+        '<div class="actions"><div class="row">' + moveButtons('photos', p.id, i, photos.length) +
+          '<button class="btn btn-ghost btn-sm" type="button" data-action="frame-open" data-table="photos" data-id="' + p.id + '">Adjust framing</button></div>' +
           '<button class="btn btn-danger btn-sm" type="button" data-action="delete" data-table="photos" data-id="' + p.id + '" data-label="this photo">Delete</button></div>' +
       '</div>';
     }).join('');
@@ -474,10 +500,10 @@ td .msgtext{max-width:42ch;white-space:pre-wrap;color:var(--muted)}
   VIEWS.board = function(){
     var ds = state.directors;
     var rows = ds.map(function(d, i){
-      var av = d.photo ? '<img class="avatar" src="' + esc(d.photo) + '" alt="">' : '<span class="avatar" aria-hidden="true">' + esc(initials(d.name)) + '</span>';
+      var av = d.photo ? '<span class="avatar"><img src="' + esc(d.photo) + '" alt="" style="width:100%;height:100%;object-fit:cover;' + rowFrame(d) + '"></span>' : '<span class="avatar" aria-hidden="true">' + esc(initials(d.name)) + '</span>';
       return '<div class="item">' +
         '<div class="avatar-wrap">' + av + '<button class="linkish" type="button" data-action="director-photo" data-id="' + d.id + '">' + (d.photo ? 'Change' : 'Add photo') + '</button>' +
-          (d.photo ? '<button class="linkish" type="button" data-action="director-photo-remove" data-id="' + d.id + '">Remove</button>' : '') + '</div>' +
+          (d.photo ? '<button class="linkish" type="button" data-action="frame-open" data-table="directors" data-id="' + d.id + '">Adjust</button><button class="linkish" type="button" data-action="director-photo-remove" data-id="' + d.id + '">Remove</button>' : '') + '</div>' +
         '<div class="item-fields">' +
           '<div class="field"><label for="d-name-' + d.id + '">Name</label><input id="d-name-' + d.id + '" value="' + esc(d.name) + '" maxlength="80" data-save="directors:' + d.id + ':name"></div>' +
           '<div class="field"><label for="d-title-' + d.id + '">Role</label><input id="d-title-' + d.id + '" value="' + esc(d.title) + '" maxlength="60" data-save="directors:' + d.id + ':title" placeholder="Director, Chair, Treasurer..."></div>' +
@@ -707,6 +733,33 @@ td .msgtext{max-width:42ch;white-space:pre-wrap;color:var(--muted)}
       call('POST', '/api/admin/test-email').then(function(r){ toast('Test email sent to ' + r.to.join(', ') + '. Check the inbox and spam folder.'); })
         .catch(fail).then(function(){ el.disabled = false; el.textContent = 'Send a test email'; });
     },
+    'frame-open': function(el){ openFrame(el.dataset.table, Number(el.dataset.id)); },
+    'frame-shape': function(el){ frame.shape = el.dataset.shape; renderFrame(); },
+    'frame-close': function(){ $('#frame-modal').hidden = true; frame = null; },
+    'frame-reset': function(){ frame.x = 50; frame.y = 50; frame.z = 100; renderFrame(); },
+    'frame-rotate': function(el){
+      frame.busy = true; renderFrame();
+      var field = frame.table === 'photos' ? 'src' : 'photo';
+      rotatedBlob(frame.src, Number(el.dataset.deg)).then(function(blob){
+        if (blob.size > 8 * 1024 * 1024) return shrink(new File([blob], 'rotated.jpg', { type: 'image/jpeg' }), 2200);
+        return blob;
+      }).then(function(blob){ return call('POST', '/api/admin/upload', blob, true); })
+        .then(function(r){
+          var body = { focus_x: 50, focus_y: 50, zoom: 100 }; body[field] = r.src;
+          return call('PUT', '/api/admin/' + frame.table + '/' + frame.id, body);
+        }).then(function(row){
+          var list = state[frame.table];
+          for (var i = 0; i < list.length; i++) if (list[i].id === row.id) list[i] = row;
+          frame.src = row[field]; frame.x = 50; frame.y = 50; frame.z = 100;
+          toast('Photo rotated');
+        }).catch(fail).then(function(){ if (frame) { frame.busy = false; renderFrame(); } });
+    },
+    'frame-save': function(){
+      var f = frame;
+      call('PUT', '/api/admin/' + f.table + '/' + f.id, { focus_x: Math.round(f.x), focus_y: Math.round(f.y), zoom: Math.round(f.z) })
+        .then(function(){ $('#frame-modal').hidden = true; frame = null; toast('Framing saved. The website is updated.'); return refresh(); })
+        .catch(fail);
+    },
     receipt: function(el){ openReceipt(Number(el.dataset.id)); },
     'close-receipt': function(){ $('#receipt-modal').hidden = true; },
     'print-receipt': function(){ window.print(); },
@@ -716,6 +769,93 @@ td .msgtext{max-width:42ch;white-space:pre-wrap;color:var(--muted)}
         .catch(function(){ var r = document.createRange(); r.selectNodeContents($('#receipt-body')); var s = getSelection(); s.removeAllRanges(); s.addRange(r); toast('Receipt selected. Press Copy.'); });
     }
   };
+
+  /* ---------- framing editor ---------- */
+
+  var frame = null;
+  var SHAPES = { wide: 'Banner on a computer', tall: 'Banner on a phone', '4x3': 'Photo row', circle: 'Board photo' };
+  function clamp(v){ return Math.max(0, Math.min(100, v)); }
+  function frameShapes(){ return frame.table === 'directors' ? ['circle'] : ['wide', 'tall', '4x3']; }
+  function frameRow(){ return state[frame.table].find(function(r){ return r.id === frame.id; }); }
+
+  function openFrame(table, id){
+    var row = state[table].find(function(r){ return r.id === id; });
+    if (!row) return;
+    frame = {
+      table: table, id: id, src: table === 'photos' ? row.src : row.photo,
+      x: row.focus_x == null ? 50 : row.focus_x, y: row.focus_y == null ? 50 : row.focus_y, z: row.zoom == null ? 100 : row.zoom,
+      shape: table === 'directors' ? 'circle' : (row.placement === 'hero' ? 'wide' : '4x3'), busy: false
+    };
+    renderFrame();
+  }
+  function renderFrame(){
+    var shapes = frameShapes();
+    var others = shapes.filter(function(s){ return s !== frame.shape; });
+    var img = '<img src="' + esc(frame.src) + '" alt="" draggable="false" data-frame-img>';
+    var m = $('#frame-modal');
+    m.innerHTML = '<div class="modal-card frame-card" role="dialog" aria-modal="true" aria-label="Adjust photo framing">' +
+      '<div class="row" style="justify-content:space-between"><h3 style="margin:0;font-size:20px">Adjust framing</h3>' +
+        (shapes.length > 1 ? '<div class="chips">' + shapes.map(function(s){ return '<button class="chip" type="button" data-action="frame-shape" data-shape="' + s + '" aria-pressed="' + (s === frame.shape) + '">' + SHAPES[s] + '</button>'; }).join('') + '</div>' : '') +
+      '</div>' +
+      '<div class="frame-layout"><div><div class="stage shape-' + frame.shape + '" id="frame-stage" tabindex="0" role="img" aria-label="Photo preview. Drag, or use the arrow keys, to move the photo.">' + img + '</div>' +
+        '<p class="hint" style="margin-top:8px">Drag the photo to choose what stays in view. Arrow keys work too.</p></div>' +
+        (others.length ? '<div class="previews">' + others.map(function(s){ return '<div class="preview"><div class="stage shape-' + s + '">' + img + '</div><span>' + SHAPES[s] + '</span></div>'; }).join('') + '</div>' : '') +
+      '</div>' +
+      '<div class="field"><label for="frame-zoom">Zoom</label><input type="range" id="frame-zoom" min="100" max="300" step="1" value="' + frame.z + '"></div>' +
+      '<div class="row" style="justify-content:space-between"><div class="row">' +
+        '<button class="btn btn-ghost btn-sm" type="button" data-action="frame-rotate" data-deg="-90"' + (frame.busy ? ' disabled' : '') + '>Rotate left</button>' +
+        '<button class="btn btn-ghost btn-sm" type="button" data-action="frame-rotate" data-deg="90"' + (frame.busy ? ' disabled' : '') + '>Rotate right</button>' +
+        '<button class="btn btn-ghost btn-sm" type="button" data-action="frame-reset">Reset</button></div>' +
+        '<div class="row"><button class="btn btn-ghost" type="button" data-action="frame-close">Cancel</button>' +
+        '<button class="btn btn-primary" type="button" data-action="frame-save"' + (frame.busy ? ' disabled' : '') + '>Save framing</button></div></div>' +
+    '</div>';
+    m.hidden = false;
+    applyFrame();
+    bindStage();
+  }
+  function applyFrame(){
+    var st = frameStyle(Math.round(frame.x), Math.round(frame.y), frame.z);
+    document.querySelectorAll('[data-frame-img]').forEach(function(i){ i.setAttribute('style', st); });
+  }
+  function bindStage(){
+    var stage = $('#frame-stage'), start = null;
+    stage.addEventListener('pointerdown', function(e){
+      stage.setPointerCapture(e.pointerId);
+      start = { px: e.clientX, py: e.clientY, x: frame.x, y: frame.y };
+      stage.classList.add('dragging');
+    });
+    stage.addEventListener('pointermove', function(e){
+      if (!start) return;
+      var r = stage.getBoundingClientRect(), k = 100 / (frame.z / 100);
+      frame.x = clamp(start.x - (e.clientX - start.px) / r.width * k);
+      frame.y = clamp(start.y - (e.clientY - start.py) / r.height * k);
+      applyFrame();
+    });
+    ['pointerup', 'pointercancel'].forEach(function(ev){ stage.addEventListener(ev, function(){ start = null; stage.classList.remove('dragging'); }); });
+    stage.addEventListener('keydown', function(e){
+      var d = { ArrowLeft: [2, 0], ArrowRight: [-2, 0], ArrowUp: [0, 2], ArrowDown: [0, -2] }[e.key];
+      if (!d) return;
+      e.preventDefault();
+      frame.x = clamp(frame.x + d[0]); frame.y = clamp(frame.y + d[1]); applyFrame();
+    });
+    $('#frame-zoom').addEventListener('input', function(e){ frame.z = Number(e.target.value); applyFrame(); });
+  }
+  // Rotating bakes the turn into a new copy of the photo.
+  function rotatedBlob(src, deg){
+    return new Promise(function(resolve, reject){
+      var img = new Image();
+      img.onload = function(){
+        var c = document.createElement('canvas');
+        c.width = img.naturalHeight; c.height = img.naturalWidth;
+        var g = c.getContext('2d');
+        g.translate(c.width / 2, c.height / 2); g.rotate(deg * Math.PI / 180);
+        g.drawImage(img, -img.naturalWidth / 2, -img.naturalHeight / 2);
+        c.toBlob(function(b){ b ? resolve(b) : reject(new Error('The photo could not be rotated.')); }, 'image/jpeg', 0.9);
+      };
+      img.onerror = function(){ reject(new Error('The photo could not be loaded for rotating.')); };
+      img.src = src;
+    });
+  }
 
   function openReceipt(id){
     var d = state.donations.find(function(x){ return x.id === id; });
@@ -741,7 +881,7 @@ td .msgtext{max-width:42ch;white-space:pre-wrap;color:var(--muted)}
       '<button class="btn btn-ghost" type="button" data-action="close-receipt">Close</button></div></div>';
     m.hidden = false;
   }
-  document.addEventListener('keydown', function(e){ if (e.key === 'Escape') $('#receipt-modal').hidden = true; });
+  document.addEventListener('keydown', function(e){ if (e.key === 'Escape') { $('#receipt-modal').hidden = true; $('#frame-modal').hidden = true; frame = null; } });
   $('#receipt-modal').addEventListener('click', function(e){ if (e.target.id === 'receipt-modal') e.target.hidden = true; });
 
   /* ---------- start ---------- */
