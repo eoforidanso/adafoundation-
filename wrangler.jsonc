@@ -1,0 +1,12 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "adacommunityimpactfoundation",
+  "compatibility_date": "2026-10-06",
+  "assets": {
+    "directory": "."
+  },
+  "routes": [
+    { "pattern": "adacommunityimpactfoundation.org", "custom_domain": true },
+    { "pattern": "www.adacommunityimpactfoundation.org", "custom_domain": true }
+  ]
+}
