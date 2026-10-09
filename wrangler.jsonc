@@ -1,10 +1,21 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "adacommunityimpactfoundation",
+  "main": "src/worker.js",
   "compatibility_date": "2026-10-06",
   "assets": {
-    "directory": "."
+    "directory": ".",
+    "binding": "ASSETS",
+    // The home page is filled in from the database; the API and uploaded photos are served by the worker.
+    "run_worker_first": ["/", "/index.html", "/api/*", "/media/*"]
   },
+  "d1_databases": [
+    { "binding": "DB", "database_name": "acif", "database_id": "25e91f12-c834-4d7a-8c50-082ee8889f21", "migrations_dir": "migrations" }
+  ],
+  "r2_buckets": [
+    { "binding": "MEDIA", "bucket_name": "acif-photos" }
+  ],
+  "observability": { "enabled": true },
   "routes": [
     { "pattern": "adacommunityimpactfoundation.org", "custom_domain": true },
     { "pattern": "www.adacommunityimpactfoundation.org", "custom_domain": true }

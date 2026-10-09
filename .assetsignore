@@ -1,6 +1,10 @@
 .git
 .wrangler
 .assetsignore
+.gitignore
 wrangler.jsonc
 README.md
-.gitignore
+src
+migrations
+node_modules
+.dev.vars

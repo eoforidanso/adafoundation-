@@ -197,6 +197,21 @@ section{padding-block:clamp(64px,9vw,112px)}
 @media (max-width:560px){.amounts{grid-template-columns:repeat(6,1fr)}.amounts button{grid-column:span 2}.amounts button:nth-child(n+4){grid-column:span 3}}
 
 
+/* Dashboard-driven content */
+.photos:not(.count-3){grid-template-columns:repeat(auto-fill,minmax(240px,1fr))}
+.photos:not(.count-3) .ph:first-child{grid-column:auto;aspect-ratio:4/3}
+.goal .kind{align-self:flex-start;margin-top:4px;font:500 11px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;padding:5px 8px;border-radius:999px;color:var(--muted);box-shadow:inset 0 0 0 1px var(--line)}
+.goal .kind-achieved{color:var(--river);box-shadow:inset 0 0 0 1px var(--river)}
+.news{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px}
+.news-item{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;display:flex;flex-direction:column;min-width:0}
+.news-item img{width:100%;aspect-ratio:16/9;object-fit:cover;display:block}
+.news-body{padding:22px;display:grid;gap:10px}
+.news-body time{font:500 12px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--river)}
+.news-body h3{font-size:22px;font-weight:700}
+.news-body p{color:var(--muted);font-size:16px}
+.avatar-img{object-fit:cover;padding:0}
+.hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+
 /* Board */
 .board{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
 @media (max-width:1060px){.board{grid-template-columns:repeat(2,1fr)}}
@@ -265,6 +280,7 @@ footer a:hover{color:var(--band-fg)}
       <li><a href="#about">About Ada</a></li>
       <li><a href="#programs">Our work</a></li>
       <li><a href="#goals">Goals</a></li>
+      <li data-slot="nav-news" hidden><a href="#news">News</a></li>
       <li><a href="#board">Board</a></li>
       <li><a href="#volunteer">Get involved</a></li>
     </ul>
@@ -274,13 +290,13 @@ footer a:hover{color:var(--band-fg)}
 
 <main id="top">
   <section class="hero">
-    <img class="hero-bg" src="images/hero-canoes.jpg" srcset="images/hero-canoes-sm.jpg 1000w, images/hero-canoes.jpg 2200w" sizes="100vw" alt="Brightly painted fishing canoes moored along the palm-lined shore of the Volta estuary at Ada Foah" fetchpriority="high">
+    <img class="hero-bg" data-slot="hero-img" src="images/hero-canoes.jpg" srcset="images/hero-canoes-sm.jpg 1000w, images/hero-canoes.jpg 2200w" sizes="100vw" alt="Brightly painted fishing canoes moored along the palm-lined shore of the Volta estuary at Ada Foah" fetchpriority="high">
     <div class="wrap">
       <div class="hero-grid">
         <div>
           <p class="eyebrow">Ada · Greater Accra Region · Ghana</p>
-          <h1 style="margin-top:18px">Building <em>brighter futures</em> for families in Ada.</h1>
-          <p class="lede">Ada Community Impact Foundation works alongside the fishing, farming and salt-winning families of Ada to open doors in education, health, clean water and fair livelihoods, and to protect the coast that sustains us.</p>
+          <h1 style="margin-top:18px" data-slot="headline">Building <em>brighter futures</em> for families in Ada.</h1>
+          <p class="lede" data-slot="lede">Ada Community Impact Foundation works alongside the fishing, farming and salt-winning families of Ada to open doors in education, health, clean water and fair livelihoods, and to protect the coast that sustains us.</p>
           <div class="ctas">
             <a class="btn btn-primary" href="#donate">Support a family</a>
             <a class="btn btn-ghost" href="#programs">See our work</a>
@@ -316,7 +332,7 @@ footer a:hover{color:var(--band-fg)}
         <div class="fact"><span class="k">The salt</span><h3>Songor Lagoon</h3><p>Generations of women have won salt from the Songor. We back cooperatives that keep this work safe and fairly paid.</p></div>
         <div class="fact"><span class="k">The culture</span><h3>Asafotufiami</h3><p>Every August the Asafotufiami festival honours Ada's history. Our work aims to carry that pride forward for the next generation.</p></div>
       </div>
-      <div class="photos">
+      <div class="photos count-3" data-slot="gallery">
         <figure class="ph"><img src="images/salt-gathering.jpg" alt="A woman in a headwrap bends to gather salt beside a thatched salt mound on the Songor Lagoon" loading="lazy" width="1200" height="800"><figcaption>Salt winning on the Songor Lagoon</figcaption></figure>
         <figure class="ph"><img src="images/salt-mounds.jpg" alt="Rows of thatched salt mounds waiting to be harvested on the Songor Lagoon" loading="lazy" width="1200" height="800"><figcaption>Salt mounds waiting for harvest</figcaption></figure>
         <figure class="ph"><img src="images/volta-sunset.jpg" alt="A woman carrying a basin on her head, silhouetted against the sunset over the Lower Volta" loading="lazy" width="1200" height="675"><figcaption>Evening on the Lower Volta</figcaption></figure>
@@ -377,17 +393,30 @@ footer a:hover{color:var(--band-fg)}
         </div>
         <p>Clear targets keep us honest. We will report progress against each one, every year.</p>
       </div>
-      <div class="goals">
+      <div class="goals" data-slot="goals">
         <div class="goal"><span class="n">500</span><span class="u">students on scholarship</span></div>
         <div class="goal"><span class="n">40</span><span class="u">community health days a year</span></div>
         <div class="goal"><span class="n">25</span><span class="u">boreholes drilled or restored</span></div>
         <div class="goal"><span class="n">50k</span><span class="u">mangrove seedlings planted</span></div>
       </div>
-      <p class="note">Targets, not results. Replace with the foundation's own figures.</p>
+      <p class="note" data-slot="goals-note">These are our targets for 2030. We will report progress against each one, every year.</p>
     </div>
   </section>
 
-  <section id="board" style="padding-top:0">
+  <section id="news" class="sand" data-slot="news" hidden>
+    <div class="wrap">
+      <div class="sec-head">
+        <div>
+          <p class="eyebrow">News &amp; events</p>
+          <h2>What is <span class="hl">happening in Ada</span></h2>
+        </div>
+        <p>Updates from our programmes, upcoming events and stories from the families we work with.</p>
+      </div>
+      <div class="news" data-slot="news-list"></div>
+    </div>
+  </section>
+
+  <section id="board">
     <div class="wrap">
       <div class="sec-head">
         <div>
@@ -396,7 +425,7 @@ footer a:hover{color:var(--band-fg)}
         </div>
         <p>Our volunteer board guides the foundation's work, keeps its finances accountable, and stays close to the families we serve in Ada.</p>
       </div>
-      <ul class="board">
+      <ul class="board" data-slot="board">
         <li class="member"><span class="avatar" aria-hidden="true">FQ</span><span class="who"><strong>Frank Quarshie</strong><span>Director</span></span></li>
         <li class="member"><span class="avatar" aria-hidden="true">LQ</span><span class="who"><strong>Loreen Quarshie</strong><span>Director</span></span></li>
         <li class="member"><span class="avatar" aria-hidden="true">AS</span><span class="who"><strong>Abena Sasu</strong><span>Director</span></span></li>
@@ -442,8 +471,8 @@ footer a:hover{color:var(--band-fg)}
         <p class="impact" id="impact" aria-live="polite"></p>
         <div class="zelle">
           <div class="zelle-head"><b>Give with Zelle</b><span class="taxnote" style="text-align:right">No fees, straight from your bank app</span></div>
-          <div class="zelle-num"><span id="zelle-number">773-329-3016</span><button class="copy-btn" type="button" id="zelle-copy">Copy number</button></div>
-          <p>Send <strong id="zelle-amt">$50</strong> to this number in your bank's Zelle app.<span id="zelle-monthly" hidden> Most bank apps let you set a Zelle payment to repeat every month.</span> For a tax receipt, email <strong>ACIF.org@gmail.com</strong> with your name, the date and the amount.</p>
+          <div class="zelle-num"><span id="zelle-number" data-slot="zelle">773-329-3016</span><button class="copy-btn" type="button" id="zelle-copy">Copy number</button></div>
+          <p>Send <strong id="zelle-amt">$50</strong> to this number in your bank's Zelle app.<span id="zelle-monthly" hidden> Most bank apps let you set a Zelle payment to repeat every month.</span> For a tax receipt, email <strong data-slot="email-text">ACIF.org@gmail.com</strong> with your name, the date and the amount.</p>
         </div>
       </div>
     </div>
@@ -471,6 +500,7 @@ footer a:hover{color:var(--band-fg)}
           </select>
         </div>
         <div class="field full"><label for="v-msg">A little about you</label><textarea id="v-msg" name="message"></textarea></div>
+        <div class="hp" aria-hidden="true"><label for="v-website">Leave this empty</label><input id="v-website" name="website" tabindex="-1" autocomplete="off"></div>
         <div class="field full"><button class="btn btn-primary" type="submit" style="justify-content:center">Send my interest</button></div>
         <p class="status" id="v-status" hidden></p>
       </form>
@@ -487,14 +517,14 @@ footer a:hover{color:var(--band-fg)}
       </div>
       <div>
         <h4>Office</h4>
-        <ul><li>Chicago, Illinois</li><li>United States</li></ul>
+        <ul><li data-slot="city">Chicago, Illinois</li><li>United States</li></ul>
       </div>
       <div>
         <h4>Contact</h4>
-        <ul><li>773-329-3016</li><li><a href="mailto:ACIF.org@gmail.com" style="overflow-wrap:anywhere">ACIF.org@gmail.com</a></li><li><a href="#volunteer">Volunteer with us</a></li></ul>
+        <ul><li data-slot="phone">773-329-3016</li><li><a data-slot="email" href="mailto:ACIF.org@gmail.com" style="overflow-wrap:anywhere">ACIF.org@gmail.com</a></li><li><a href="#volunteer">Volunteer with us</a></li></ul>
       </div>
     </div>
-    <p class="credits">Photos from Wikimedia Commons, resized: canoes on the Volta estuary by <a href="https://commons.wikimedia.org/wiki/File:Ada_Foah_Beach_2.jpg" target="_blank" rel="noopener">Philip Nalangan</a> (<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>); salt winning and salt mounds by <a href="https://commons.wikimedia.org/wiki/File:Salt_gathering_by_an_Old_Lady_at_Songhor_Lagoon.jpg" target="_blank" rel="noopener">Els Holmes</a> (<a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">CC BY-SA 4.0</a>); Volta sunset by <a href="https://commons.wikimedia.org/wiki/File:Enjoying_the_view_as_the_sun_sets_on_the_River_Volta.jpg" target="_blank" rel="noopener">Laila Seidu</a> (<a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">CC BY-SA 4.0</a>).</p>
+    <p class="credits" data-slot="credits">Photos from Wikimedia Commons, resized: canoes on the Volta estuary by <a href="https://commons.wikimedia.org/wiki/File:Ada_Foah_Beach_2.jpg" target="_blank" rel="noopener">Philip Nalangan</a> (<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>); salt winning and salt mounds by <a href="https://commons.wikimedia.org/wiki/File:Salt_gathering_by_an_Old_Lady_at_Songhor_Lagoon.jpg" target="_blank" rel="noopener">Els Holmes</a> (<a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">CC BY-SA 4.0</a>); Volta sunset by <a href="https://commons.wikimedia.org/wiki/File:Enjoying_the_view_as_the_sun_sets_on_the_River_Volta.jpg" target="_blank" rel="noopener">Laila Seidu</a> (<a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">CC BY-SA 4.0</a>).</p>
     <div class="fine"><span>© 2026 Ada Community Impact Foundation · A 501(c)(3) nonprofit organization · EIN 43-2211263</span><span>Together for Ada</span></div>
   </div>
 </footer>
@@ -553,13 +583,31 @@ footer a:hover{color:var(--band-fg)}
   var form = document.getElementById('vol-form'), status = document.getElementById('v-status');
   form.addEventListener('submit', function(e){
     e.preventDefault();
-    var name = form.name.value.trim(), email = form.email.value.trim();
+    var f = form.elements;
+    var data = {
+      name: f.namedItem('name').value.trim(), email: f.namedItem('email').value.trim(),
+      phone: f.namedItem('phone').value.trim(), area: f.namedItem('area').value,
+      message: f.namedItem('message').value.trim(), website: f.namedItem('website').value
+    };
     status.hidden = false;
-    if(!name || !/^\S+@\S+\.\S+$/.test(email)){
+    if(!data.name || !/^\S+@\S+\.\S+$/.test(data.email)){
       status.textContent = 'Please add your name and a valid email address so we can reply.';
       return;
     }
-    status.textContent = 'Thank you, ' + name.split(' ')[0] + '. Your details are ready. Sign-ups are not connected yet, so please also reach the foundation directly using the contact details below.';
+    var btn = form.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    status.textContent = 'Sending...';
+    fetch('/api/volunteer', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(data) })
+      .then(function(r){ return r.json().catch(function(){ return {}; }).then(function(j){ return { ok: r.ok, j: j }; }); })
+      .then(function(res){
+        if (!res.ok) throw new Error(res.j.error || '');
+        status.textContent = 'Thank you, ' + data.name.split(' ')[0] + '. We received your details and will be in touch soon.';
+        form.reset();
+      })
+      .catch(function(err){
+        status.textContent = (err && err.message) || 'We could not send your details right now. Please email ACIF.org@gmail.com instead.';
+      })
+      .then(function(){ btn.disabled = false; });
   });
 })();
 </script>

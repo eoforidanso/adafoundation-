@@ -4,18 +4,38 @@ Website for Ada Community Impact Foundation, supporting education, health, clean
 
 A single static page (`index.html`) with no build step.
 
+## Dashboard
+
+The foundation manages the site at https://adacommunityimpactfoundation.org/admin:
+
+- **Photos**: upload photos, pick the main banner, add captions, credits and descriptions
+- **Board**: add, edit, reorder or remove directors, with optional photos
+- **Goals**: edit the impact numbers and mark each as a 2030 target or achieved
+- **News & events**: publish updates; a News section appears on the site when one is published
+- **Volunteers**: sign-ups from the "Get involved" form, with status tracking and spreadsheet export
+- **Donations & receipts**: record Zelle, check or cash gifts and produce IRS-compliant receipts
+- **Site details**: headline, introduction, phone, Zelle, email and city
+
+Content lives in the Cloudflare D1 database `acif`; uploaded photos live in the R2 bucket `acif-photos`.
+`index.html` keeps the original content as a fallback; the worker (`src/worker.js`) fills in the latest
+content from the database on every visit.
+
+### Setting or changing the dashboard password
+
+```bash
+cd ~/Desktop/vscode/adafoundation
+npx wrangler secret put ADMIN_PASSWORD
+```
+
+Type the password when asked. Changing it signs everyone out.
+
 ## Deploying
 
-The site is served by Cloudflare at https://adacommunityimpactfoundation.org (and www). After changing `index.html`, deploy with:
+After changing code or static files, deploy with:
 
 ```bash
 npx wrangler deploy
 ```
 
-`wrangler.jsonc` holds the Cloudflare settings and custom domains; `.assetsignore` keeps the README and config files from being published. GitHub Pages also serves a copy at https://eoforidanso.github.io/adafoundation-/.
-
-## Before going live
-
-- Donations are taken by Zelle at 773-329-3016; send donors a written receipt for gifts of $250 or more.
-- Replace the example 2030 goal figures with the foundation's own.
-- Connect the volunteer form to a form service.
+Database changes go in `migrations/` and are applied with `npx wrangler d1 migrations apply acif --remote`.
+`.assetsignore` keeps the code, database files and README from being published.

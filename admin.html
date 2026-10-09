@@ -1,0 +1,751 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>ACIF Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: a working tool. Left rail of sections, one editing panel at a time. Same lagoon/teal/sand palette as the public site. */
+:root{
+  --bg:#F5EFE6; --surface:#FFFFFF; --ink:#0C2A30; --muted:#4D6A70; --line:#E2DACD; --line-strong:#CFC5B5;
+  --river:#0B7F86; --river-ink:#FFFFFF; --river-soft:#E3F2F2; --sun:#E5A632;
+  --rail:#0C2A30; --rail-fg:#E8F1F0; --rail-muted:#9DBBBD;
+  --ok:#1E7B4F; --warn:#9A6200; --bad:#B3261E; --bad-soft:#FBE9E7;
+  --display:"Bricolage Grotesque","Avenir Next","Segoe UI",system-ui,sans-serif;
+  --body:"Instrument Sans","Helvetica Neue",Arial,system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0B1A1D; --surface:#11262B; --ink:#E6F0EF; --muted:#9AB5B7; --line:#1F3B41; --line-strong:#2C4D54;
+    --river:#3FC1C6; --river-ink:#04272B; --river-soft:#123A3E; --sun:#F0B94C;
+    --rail:#061215; --rail-fg:#E6F0EF; --rail-muted:#86A6A9;
+    --ok:#5BC48E; --warn:#F0B94C; --bad:#FF8A80; --bad-soft:#3A1715;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0B1A1D; --surface:#11262B; --ink:#E6F0EF; --muted:#9AB5B7; --line:#1F3B41; --line-strong:#2C4D54;
+  --river:#3FC1C6; --river-ink:#04272B; --river-soft:#123A3E; --sun:#F0B94C;
+  --rail:#061215; --rail-fg:#E6F0EF; --rail-muted:#86A6A9;
+  --ok:#5BC48E; --warn:#F0B94C; --bad:#FF8A80; --bad-soft:#3A1715;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:400 15px/1.5 var(--body);-webkit-font-smoothing:antialiased}
+[hidden]{display:none!important}
+h1,h2,h3{font-family:var(--display);margin:0;line-height:1.15;letter-spacing:-.01em}
+p{margin:0}
+a{color:var(--river)}
+:focus-visible{outline:3px solid var(--sun);outline-offset:2px;border-radius:6px}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+
+/* Controls */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:0;cursor:pointer;font:600 14px/1 var(--body);padding:10px 16px;border-radius:999px;text-decoration:none;white-space:nowrap}
+.btn-primary{background:var(--river);color:var(--river-ink)}
+.btn-ghost{background:transparent;color:var(--ink);box-shadow:inset 0 0 0 1.5px var(--line-strong)}
+.btn-ghost:hover{box-shadow:inset 0 0 0 1.5px var(--river)}
+.btn-danger{background:transparent;color:var(--bad);box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--bad) 45%,transparent)}
+.btn-danger:hover{background:var(--bad-soft)}
+.btn-sm{padding:7px 12px;font-size:13px}
+.icon-btn{width:32px;height:32px;padding:0;border-radius:8px;border:1.5px solid var(--line-strong);background:transparent;color:var(--ink);cursor:pointer;font-size:15px;line-height:1}
+.icon-btn:hover{border-color:var(--river)}
+.icon-btn:disabled{opacity:.35;cursor:default}
+button:disabled{opacity:.6;cursor:default}
+label{font-size:13px;font-weight:600;color:var(--muted)}
+input,select,textarea{font:inherit;font-size:15px;color:var(--ink);background:var(--surface);border:1.5px solid var(--line-strong);border-radius:10px;padding:9px 12px;width:100%;min-width:0}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--river)}
+textarea{resize:vertical;min-height:90px}
+input[type="checkbox"]{width:18px;height:18px;accent-color:var(--river)}
+.field{display:grid;gap:5px;min-width:0}
+.hint{font-size:13px;color:var(--muted)}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+@media (max-width:720px){.grid2,.grid3{grid-template-columns:1fr}}
+
+/* Login */
+.login{min-height:100vh;display:grid;place-items:center;padding:24px 16px}
+.login-card{width:min(420px,100%);background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:32px;display:grid;gap:18px}
+.login-card h1{font-size:28px;font-weight:800}
+.msg{padding:10px 14px;border-radius:10px;font-size:14px}
+.msg-bad{background:var(--bad-soft);color:var(--bad)}
+.msg-info{background:var(--river-soft);color:var(--ink)}
+
+/* App shell */
+.app{display:grid;grid-template-columns:240px minmax(0,1fr);min-height:100vh}
+.rail{background:var(--rail);color:var(--rail-fg);padding:24px 14px;display:flex;flex-direction:column;gap:20px;position:sticky;top:0;height:100vh}
+.brand{display:flex;align-items:center;gap:10px;padding:0 8px;font:800 17px/1.1 var(--display)}
+.brand small{display:block;font:500 11px/1.4 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--sun);margin-top:3px}
+.tabs{display:grid;gap:2px}
+.tab{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:0;background:transparent;color:var(--rail-muted);font:500 15px/1 var(--body);padding:11px 12px;border-radius:10px;cursor:pointer}
+.tab:hover{color:var(--rail-fg);background:color-mix(in srgb,var(--rail-fg) 7%,transparent)}
+.tab[aria-selected="true"]{color:var(--rail-fg);background:color-mix(in srgb,var(--rail-fg) 12%,transparent)}
+.badge{font:500 11px/1 var(--mono);padding:4px 7px;border-radius:999px;background:var(--sun);color:#1C1400}
+.rail-foot{margin-top:auto;display:grid;gap:8px;padding:0 4px}
+.rail-foot a,.rail-foot button{color:var(--rail-muted);background:none;border:0;font:500 14px/1.4 var(--body);text-align:left;padding:6px 8px;cursor:pointer;text-decoration:none;border-radius:8px}
+.rail-foot a:hover,.rail-foot button:hover{color:var(--rail-fg)}
+main{padding:32px clamp(16px,4vw,48px) 64px;min-width:0}
+.panel-head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:24px}
+.panel-head h2{font-size:clamp(26px,3vw,34px);font-weight:800}
+.panel-head p{color:var(--muted);margin-top:6px;max-width:62ch}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px;min-width:0}
+.card + .card{margin-top:16px}
+.card h3{font-size:18px;font-weight:600;margin-bottom:14px}
+.stack{display:grid;gap:14px}
+@media (max-width:860px){
+  .app{grid-template-columns:minmax(0,1fr)}
+  .rail{min-width:0}
+  .rail{position:sticky;top:0;z-index:5;height:auto;padding:12px 12px 0;gap:10px}
+  .tabs{display:flex;overflow-x:auto;gap:4px;padding-bottom:10px;scrollbar-width:none}
+  .tab{flex:none;width:auto;padding:9px 12px;font-size:14px}
+  .rail-foot{display:none}
+  .mobile-foot{display:flex!important}
+}
+.mobile-foot{display:none;gap:12px;flex-wrap:wrap;margin-top:32px}
+
+/* Overview */
+.stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;margin-bottom:20px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;display:grid;gap:4px;text-align:left;cursor:pointer;font:inherit;color:inherit}
+.stat:hover{border-color:var(--river)}
+.stat .n{font:800 34px/1 var(--display);color:var(--river);font-variant-numeric:tabular-nums}
+.stat .l{color:var(--muted);font-size:14px}
+.stat.alert .n{color:var(--warn)}
+
+/* Uploads */
+.drop{display:grid;place-items:center;gap:6px;text-align:center;padding:28px 16px;border:2px dashed var(--line-strong);border-radius:16px;background:var(--surface);cursor:pointer;color:var(--muted)}
+.drop strong{color:var(--ink);font-size:16px}
+.drop.over{border-color:var(--river);background:var(--river-soft)}
+.drop input{position:absolute;width:1px;height:1px;opacity:0}
+.progress{font:500 13px/1.4 var(--mono);color:var(--river)}
+
+/* Photos */
+.photo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin-top:16px}
+.photo-card{background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden;display:flex;flex-direction:column;min-width:0}
+.photo-card.is-hero{border-color:var(--river);box-shadow:0 0 0 2px var(--river)}
+.photo-card.is-hidden img{opacity:.45}
+.photo-card .thumb{position:relative;aspect-ratio:4/3;background:var(--line)}
+.photo-card img{width:100%;height:100%;object-fit:cover;display:block}
+.photo-card .tag{position:absolute;top:10px;left:10px;font:500 11px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;padding:6px 9px;border-radius:999px;background:var(--river);color:var(--river-ink)}
+.photo-card .tag.muted{background:#0009;color:#fff}
+.photo-card .body{padding:14px;display:grid;gap:10px}
+.photo-card .actions{display:flex;justify-content:space-between;gap:8px;padding:0 14px 14px;align-items:center}
+
+/* Lists */
+.list{display:grid;gap:10px}
+.item{display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;min-width:0}
+.item-fields{display:grid;grid-template-columns:1.2fr 1fr;gap:10px;min-width:0}
+.item-actions{display:flex;gap:6px;align-items:center}
+.avatar{width:52px;height:52px;border-radius:50%;display:grid;place-items:center;font:700 17px/1 var(--display);color:var(--river);background:var(--river-soft);object-fit:cover;flex:none;overflow:hidden;position:relative}
+.avatar-wrap{display:grid;gap:4px;justify-items:center}
+.linkish{background:none;border:0;color:var(--river);font:600 12px/1.2 var(--body);cursor:pointer;padding:2px}
+.goal-item{grid-template-columns:110px 1fr 170px auto}
+@media (max-width:720px){
+  .item{grid-template-columns:auto 1fr}
+  .item-actions{grid-column:1/-1;justify-content:flex-end}
+  .item-fields{grid-template-columns:1fr}
+  .goal-item{grid-template-columns:1fr 1fr}
+  .goal-item .item-actions{grid-column:1/-1}
+}
+
+/* Tables */
+.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:500 11px/1.2 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);background:color-mix(in srgb,var(--bg) 60%,var(--surface));white-space:nowrap}
+tr:last-child td{border-bottom:0}
+td.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+td .msgtext{max-width:42ch;white-space:pre-wrap;color:var(--muted)}
+.pill{display:inline-block;font:500 11px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;padding:5px 8px;border-radius:999px;white-space:nowrap}
+.pill-new{background:color-mix(in srgb,var(--sun) 25%,transparent);color:var(--warn)}
+.pill-ok{background:color-mix(in srgb,var(--ok) 15%,transparent);color:var(--ok)}
+.pill-muted{background:color-mix(in srgb,var(--muted) 15%,transparent);color:var(--muted)}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1.5px solid var(--line-strong);background:transparent;color:var(--ink);font:600 13px/1 var(--body);padding:8px 12px;border-radius:999px;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.empty{padding:28px;text-align:center;color:var(--muted)}
+
+/* Receipt */
+.modal{position:fixed;inset:0;z-index:20;background:#0009;display:grid;place-items:center;padding:16px;overflow-y:auto}
+.modal-card{background:var(--surface);color:var(--ink);border-radius:18px;width:min(640px,100%);padding:24px;display:grid;gap:16px}
+.receipt{background:#fff;color:#14262A;border:1px solid #E2DACD;border-radius:12px;padding:32px;font-size:14px;line-height:1.6}
+.receipt h4{font:800 20px/1.2 var(--display);margin:0;color:#0C2A30}
+.receipt .meta{color:#4D6A70;font-size:13px}
+.receipt dl{display:grid;grid-template-columns:140px 1fr;gap:6px 12px;margin:18px 0}
+.receipt dt{color:#4D6A70}
+.receipt dd{margin:0;font-weight:600}
+.receipt .statement{border-top:1px solid #E2DACD;padding-top:14px;margin-top:14px}
+
+/* Toast */
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:30;background:var(--ink);color:var(--bg);padding:12px 18px;border-radius:12px;font-weight:500;box-shadow:0 8px 30px #0003;max-width:calc(100% - 32px)}
+.toast.bad{background:var(--bad);color:#fff}
+
+@media print{
+  body{background:#fff}
+  body > *:not(#receipt-modal){display:none!important}
+  #receipt-modal{position:static;background:none;padding:0;display:block}
+  #receipt-modal .modal-card{box-shadow:none;padding:0;width:100%}
+  #receipt-modal .no-print{display:none!important}
+  .receipt{border:0;padding:0}
+}
+</style>
+</head>
+<body>
+
+<div class="login" id="login" hidden>
+  <form class="login-card" id="login-form">
+    <div>
+      <p class="hint" style="font-family:var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--river)">Ada Community Impact Foundation</p>
+      <h1 style="margin-top:8px">Dashboard sign-in</h1>
+    </div>
+    <p class="msg msg-bad" id="login-msg" hidden></p>
+    <div class="field">
+      <label for="pw">Password</label>
+      <input id="pw" type="password" autocomplete="current-password" required>
+    </div>
+    <button class="btn btn-primary" type="submit" id="login-btn">Sign in</button>
+    <a href="/" class="hint">Back to the website</a>
+  </form>
+</div>
+
+<div class="app" id="app" hidden>
+  <aside class="rail">
+    <div class="brand">
+      <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="15" fill="#0B7F86"/><circle cx="16" cy="13" r="5" fill="#E5A632"/><path d="M3 19c4-3 7 3 13 0s9 3 13 0v6a15 15 0 0 1-26 0z" fill="#F4F7F6"/></svg>
+      <span>ACIF<small>Dashboard</small></span>
+    </div>
+    <nav class="tabs" role="tablist" aria-label="Dashboard sections" id="tabs"></nav>
+    <div class="rail-foot">
+      <a href="/" target="_blank" rel="noopener">View website ↗</a>
+      <button type="button" data-action="logout">Sign out</button>
+    </div>
+  </aside>
+  <main id="main"></main>
+</div>
+
+<div class="modal" id="receipt-modal" hidden></div>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script>
+(function(){
+  var TABS = [
+    ['overview', 'Overview'],
+    ['photos', 'Photos'],
+    ['board', 'Board'],
+    ['goals', 'Goals'],
+    ['news', 'News & events'],
+    ['volunteers', 'Volunteers'],
+    ['donations', 'Donations & receipts'],
+    ['settings', 'Site details']
+  ];
+  var EIN = '43-2211263', LEGAL = 'Ada Community Impact Foundation';
+  var state = null;
+  var tab = 'overview';
+  var volFilter = 'new';
+  var editingNews = null;
+
+  var $ = function(s, el){ return (el || document).querySelector(s); };
+  function esc(v){ return String(v == null ? '' : v).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function initials(n){ return String(n).split(/\s+/).filter(Boolean).map(function(w){ return w[0]; }).join('').slice(0,3).toUpperCase(); }
+  function money(c){ return '$' + (c / 100).toLocaleString('en-US', { minimumFractionDigits: c % 100 ? 2 : 0, maximumFractionDigits: 2 }); }
+  function today(){ var d = new Date(); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
+  function prettyDate(iso){
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(iso || '')) return '';
+    var p = iso.split('-').map(Number);
+    return new Date(p[0], p[1]-1, p[2]).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+  function receiptNo(d){ return 'ACIF-' + String(d.gift_date).slice(0,4) + '-' + String(d.id).padStart(4,'0'); }
+
+  var toastTimer;
+  function toast(msg, bad){
+    var t = $('#toast');
+    t.textContent = msg; t.className = 'toast' + (bad ? ' bad' : ''); t.hidden = false;
+    clearTimeout(toastTimer); toastTimer = setTimeout(function(){ t.hidden = true; }, bad ? 6000 : 2600);
+  }
+
+  function call(method, path, body, binary){
+    var opts = { method: method, headers: { 'x-acif-admin': '1' }, credentials: 'same-origin' };
+    if (body !== undefined) {
+      if (binary) { opts.headers['content-type'] = body.type || 'image/jpeg'; opts.body = body; }
+      else { opts.headers['content-type'] = 'application/json'; opts.body = JSON.stringify(body); }
+    }
+    return fetch(path, opts).then(function(r){
+      return r.json().catch(function(){ return {}; }).then(function(j){
+        if (r.status === 401 && path !== '/api/login') { showLogin('Your session has ended. Please sign in again.'); throw new Error('Signed out'); }
+        if (!r.ok) throw new Error(j.error || 'Something went wrong. Please try again.');
+        return j;
+      });
+    });
+  }
+  function fail(err){ if (err && err.message !== 'Signed out') toast(err.message, true); }
+
+  // Shrink photos in the browser before upload so they load fast on phones.
+  function shrink(file, max){
+    if (!/^image\/(jpeg|png|webp)$/.test(file.type) || !window.createImageBitmap) return Promise.resolve(file);
+    return createImageBitmap(file, { imageOrientation: 'from-image' }).then(function(bmp){
+      var scale = Math.min(1, max / Math.max(bmp.width, bmp.height));
+      var c = document.createElement('canvas');
+      c.width = Math.round(bmp.width * scale); c.height = Math.round(bmp.height * scale);
+      c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+      return new Promise(function(res){ c.toBlob(res, 'image/jpeg', 0.84); }).then(function(blob){
+        return blob && (blob.size < file.size || scale < 1) ? blob : file;
+      });
+    }).catch(function(){ return file; });
+  }
+  function uploadImage(file, max){
+    if (!/^image\//.test(file.type)) return Promise.reject(new Error(file.name + ' is not a photo.'));
+    return shrink(file, max || 1800).then(function(blob){
+      if (blob.size > 8 * 1024 * 1024) throw new Error(file.name + ' is too large (8 MB max).');
+      return call('POST', '/api/admin/upload', blob, true);
+    }).then(function(r){ return r.src; });
+  }
+  function pickFile(cb){
+    var i = document.createElement('input'); i.type = 'file'; i.accept = 'image/*';
+    i.onchange = function(){ if (i.files[0]) cb(i.files[0]); };
+    i.click();
+  }
+
+  function csv(rows, cols){
+    function q(v){
+      v = String(v == null ? '' : v);
+      if (/^[=+\-@]/.test(v)) v = "'" + v; // stop spreadsheets running formulas
+      return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
+    }
+    return [cols.map(function(c){ return q(c[0]); }).join(',')].concat(rows.map(function(r){ return cols.map(function(c){ return q(c[1](r)); }).join(','); })).join('\n');
+  }
+  function download(name, text){
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([text], { type: 'text/csv;charset=utf-8' }));
+    a.download = name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); }, 2000);
+  }
+
+  /* ---------- auth ---------- */
+
+  function showLogin(message, info){
+    $('#app').hidden = true; $('#login').hidden = false;
+    var m = $('#login-msg');
+    m.hidden = !message; m.textContent = message || ''; m.className = 'msg ' + (info ? 'msg-info' : 'msg-bad');
+    setTimeout(function(){ $('#pw').focus(); }, 0);
+  }
+  $('#login-form').addEventListener('submit', function(e){
+    e.preventDefault();
+    var btn = $('#login-btn'); btn.disabled = true; btn.textContent = 'Signing in...';
+    call('POST', '/api/login', { password: $('#pw').value })
+      .then(function(){ $('#pw').value = ''; return load(); })
+      .catch(function(err){ showLogin(err.message); })
+      .then(function(){ btn.disabled = false; btn.textContent = 'Sign in'; });
+  });
+
+  function load(){
+    return call('GET', '/api/admin/all').then(function(data){
+      state = data;
+      $('#login').hidden = true; $('#app').hidden = false;
+      render();
+    });
+  }
+  function refresh(){ return call('GET', '/api/admin/all').then(function(d){ state = d; render(); }); }
+
+  /* ---------- shell ---------- */
+
+  function render(){
+    var newVols = state.volunteers.filter(function(v){ return v.status === 'new'; }).length;
+    $('#tabs').innerHTML = TABS.map(function(t){
+      var badge = t[0] === 'volunteers' && newVols ? '<span class="badge">' + newVols + '</span>' : '';
+      return '<button class="tab" role="tab" type="button" data-tab="' + t[0] + '" aria-selected="' + (t[0] === tab) + '"><span>' + esc(t[1]) + '</span>' + badge + '</button>';
+    }).join('');
+    var main = $('#main');
+    main.innerHTML = (VIEWS[tab] || VIEWS.overview)() +
+      '<div class="mobile-foot"><a class="btn btn-ghost btn-sm" href="/" target="_blank" rel="noopener">View website ↗</a><button class="btn btn-ghost btn-sm" type="button" data-action="logout">Sign out</button></div>';
+    if (AFTER[tab]) AFTER[tab]();
+  }
+  function go(t){ tab = t; try { history.replaceState(null, '', '#' + t); } catch (e) {} render(); window.scrollTo(0, 0); }
+
+  document.addEventListener('click', function(e){
+    var t = e.target.closest('[data-tab]'); if (t) { go(t.dataset.tab); return; }
+    var a = e.target.closest('[data-action]'); if (!a) return;
+    var fn = ACTIONS[a.dataset.action]; if (fn) fn(a, e);
+  });
+  document.addEventListener('change', function(e){
+    var el = e.target.closest('[data-save]'); if (!el) return;
+    var parts = el.dataset.save.split(':'); // table:id:field
+    var v = el.type === 'checkbox' ? el.checked : el.value;
+    var body = {}; body[parts[2]] = v;
+    call('PUT', '/api/admin/' + parts[0] + '/' + parts[1], body).then(function(row){
+      var list = state[parts[0]];
+      for (var i = 0; i < list.length; i++) if (list[i].id === row.id) list[i] = row;
+      toast('Saved');
+      if (parts[0] === 'photos' && parts[2] === 'placement') refresh();
+      if (parts[0] === 'volunteers') render();
+    }).catch(function(err){ fail(err); refresh(); });
+  });
+
+  function head(title, text, extra){
+    return '<div class="panel-head"><div><h2>' + esc(title) + '</h2>' + (text ? '<p>' + text + '</p>' : '') + '</div>' + (extra || '') + '</div>';
+  }
+  function moveButtons(table, id, i, n){
+    return '<button class="icon-btn" type="button" title="Move up" aria-label="Move up" data-action="move" data-table="' + table + '" data-id="' + id + '" data-dir="-1"' + (i === 0 ? ' disabled' : '') + '>↑</button>' +
+           '<button class="icon-btn" type="button" title="Move down" aria-label="Move down" data-action="move" data-table="' + table + '" data-id="' + id + '" data-dir="1"' + (i === n - 1 ? ' disabled' : '') + '>↓</button>';
+  }
+
+  /* ---------- views ---------- */
+
+  var VIEWS = {};
+  var AFTER = {};
+
+  VIEWS.overview = function(){
+    var year = String(new Date().getFullYear());
+    var gifts = state.donations.filter(function(d){ return String(d.gift_date).slice(0,4) === year; });
+    var total = gifts.reduce(function(s, d){ return s + d.amount_cents; }, 0);
+    var big = gifts.filter(function(d){ return d.amount_cents >= 25000; }).length;
+    var newVols = state.volunteers.filter(function(v){ return v.status === 'new'; });
+    var stat = function(n, l, t, alert){ return '<button class="stat' + (alert ? ' alert' : '') + '" type="button" data-tab="' + t + '"><span class="n">' + n + '</span><span class="l">' + l + '</span></button>'; };
+    return head('Welcome back', 'Everything you change here appears on <a href="/" target="_blank" rel="noopener">adacommunityimpactfoundation.org</a> straight away.') +
+      '<div class="stats">' +
+        stat(newVols.length, 'new volunteer sign-ups', 'volunteers', newVols.length > 0) +
+        stat(money(total), 'recorded in gifts in ' + year, 'donations') +
+        stat(big, 'gifts of $250+ in ' + year + ' (need a written receipt)', 'donations') +
+        stat(state.directors.length, 'board directors', 'board') +
+        stat(state.photos.filter(function(p){ return p.placement !== 'hidden'; }).length, 'photos on the website', 'photos') +
+        stat(state.news.filter(function(n){ return n.published; }).length, 'published news posts', 'news') +
+      '</div>' +
+      '<div class="card"><h3>Newest volunteer sign-ups</h3>' +
+        (newVols.length ? '<div class="list">' + newVols.slice(0, 5).map(function(v){
+          return '<div class="row" style="justify-content:space-between;border-bottom:1px solid var(--line);padding-bottom:10px"><div><strong>' + esc(v.name) + '</strong> <span class="hint">· ' + esc(v.area) + '</span><div class="hint">' + esc(v.email) + (v.phone ? ' · ' + esc(v.phone) : '') + '</div></div><span class="hint">' + new Date(v.created_at).toLocaleDateString() + '</span></div>';
+        }).join('') + '</div><p style="margin-top:12px"><button class="btn btn-ghost btn-sm" type="button" data-tab="volunteers">See all sign-ups</button></p>'
+        : '<p class="hint">No new sign-ups. When someone fills in the volunteer form on the website, they appear here.</p>') +
+      '</div>';
+  };
+
+  VIEWS.photos = function(){
+    var photos = state.photos;
+    var cards = photos.map(function(p, i){
+      var cls = p.placement === 'hero' ? ' is-hero' : p.placement === 'hidden' ? ' is-hidden' : '';
+      var tag = p.placement === 'hero' ? '<span class="tag">Main banner</span>' : p.placement === 'hidden' ? '<span class="tag muted">Hidden</span>' : '';
+      return '<div class="photo-card' + cls + '">' +
+        '<div class="thumb"><img src="' + esc(p.src) + '" alt="" loading="lazy">' + tag + '</div>' +
+        '<div class="body">' +
+          '<div class="field"><label for="ph-cap-' + p.id + '">Caption</label><input id="ph-cap-' + p.id + '" value="' + esc(p.caption) + '" maxlength="120" data-save="photos:' + p.id + ':caption" placeholder="Shown on the photo"></div>' +
+          '<div class="field"><label for="ph-alt-' + p.id + '">Description for screen readers</label><input id="ph-alt-' + p.id + '" value="' + esc(p.alt) + '" maxlength="200" data-save="photos:' + p.id + ':alt" placeholder="What is in the photo?"></div>' +
+          '<div class="field"><label for="ph-pl-' + p.id + '">Where it appears</label><select id="ph-pl-' + p.id + '" data-save="photos:' + p.id + ':placement">' +
+            [['gallery','Photo row under About Ada'],['hero','Main banner at the top'],['hidden','Hidden from the website']].map(function(o){ return '<option value="' + o[0] + '"' + (p.placement === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') +
+          '</select></div>' +
+          '<details><summary class="hint" style="cursor:pointer">Photo credit</summary><div class="stack" style="margin-top:10px">' +
+            '<div class="field"><label for="ph-cr-' + p.id + '">Credit</label><input id="ph-cr-' + p.id + '" value="' + esc(p.credit) + '" maxlength="300" data-save="photos:' + p.id + ':credit" placeholder="Leave empty for your own photos"></div>' +
+            '<div class="field"><label for="ph-cu-' + p.id + '">Credit link</label><input id="ph-cu-' + p.id + '" value="' + esc(p.credit_url) + '" maxlength="300" data-save="photos:' + p.id + ':credit_url" placeholder="https://"></div>' +
+          '</div></details>' +
+        '</div>' +
+        '<div class="actions"><div class="row">' + moveButtons('photos', p.id, i, photos.length) + '</div>' +
+          '<button class="btn btn-danger btn-sm" type="button" data-action="delete" data-table="photos" data-id="' + p.id + '" data-label="this photo">Delete</button></div>' +
+      '</div>';
+    }).join('');
+    return head('Photos', 'Upload photos of your work. Choose one as the main banner at the top of the website; the rest appear in the photo row under About Ada, in this order.') +
+      '<label class="drop" id="drop"><input type="file" accept="image/*" multiple id="photo-files"><strong>Drop photos here, or click to choose</strong><span>JPG, PNG or WebP. Large photos are shrunk automatically.</span><span class="progress" id="upload-progress"></span></label>' +
+      '<p class="hint" style="margin-top:10px">Only upload photos you have the right to use, and ask permission before posting photos of people, especially children.</p>' +
+      (photos.length ? '<div class="photo-grid">' + cards + '</div>' : '<div class="card empty" style="margin-top:16px">No photos yet.</div>');
+  };
+  AFTER.photos = function(){
+    var drop = $('#drop'), input = $('#photo-files');
+    function handle(files){
+      files = Array.prototype.slice.call(files).filter(function(f){ return /^image\//.test(f.type); });
+      if (!files.length) return;
+      var prog = $('#upload-progress'), done = 0;
+      prog.textContent = 'Uploading 0 of ' + files.length + '...';
+      files.reduce(function(chain, f){
+        return chain.then(function(){
+          return uploadImage(f, 2200).then(function(src){
+            return call('POST', '/api/admin/photos', { src: src, caption: '', alt: '', placement: 'gallery' });
+          }).then(function(){ done++; prog.textContent = 'Uploading ' + done + ' of ' + files.length + '...'; }).catch(fail);
+        });
+      }, Promise.resolve()).then(function(){ toast(done + (done === 1 ? ' photo' : ' photos') + ' uploaded. Add a caption and description to each.'); return refresh(); });
+    }
+    input.addEventListener('change', function(){ handle(input.files); });
+    ['dragenter','dragover'].forEach(function(ev){ drop.addEventListener(ev, function(e){ e.preventDefault(); drop.classList.add('over'); }); });
+    ['dragleave','drop'].forEach(function(ev){ drop.addEventListener(ev, function(e){ e.preventDefault(); drop.classList.remove('over'); }); });
+    drop.addEventListener('drop', function(e){ handle(e.dataTransfer.files); });
+  };
+
+  VIEWS.board = function(){
+    var ds = state.directors;
+    var rows = ds.map(function(d, i){
+      var av = d.photo ? '<img class="avatar" src="' + esc(d.photo) + '" alt="">' : '<span class="avatar" aria-hidden="true">' + esc(initials(d.name)) + '</span>';
+      return '<div class="item">' +
+        '<div class="avatar-wrap">' + av + '<button class="linkish" type="button" data-action="director-photo" data-id="' + d.id + '">' + (d.photo ? 'Change' : 'Add photo') + '</button>' +
+          (d.photo ? '<button class="linkish" type="button" data-action="director-photo-remove" data-id="' + d.id + '">Remove</button>' : '') + '</div>' +
+        '<div class="item-fields">' +
+          '<div class="field"><label for="d-name-' + d.id + '">Name</label><input id="d-name-' + d.id + '" value="' + esc(d.name) + '" maxlength="80" data-save="directors:' + d.id + ':name"></div>' +
+          '<div class="field"><label for="d-title-' + d.id + '">Role</label><input id="d-title-' + d.id + '" value="' + esc(d.title) + '" maxlength="60" data-save="directors:' + d.id + ':title" placeholder="Director, Chair, Treasurer..."></div>' +
+        '</div>' +
+        '<div class="item-actions">' + moveButtons('directors', d.id, i, ds.length) +
+          '<button class="btn btn-danger btn-sm" type="button" data-action="delete" data-table="directors" data-id="' + d.id + '" data-label="' + esc(d.name) + '">Remove</button></div>' +
+      '</div>';
+    }).join('');
+    return head('Board of Directors', 'Add, edit or remove directors. They appear on the website in this order.') +
+      '<form class="card" id="add-director"><h3>Add a director</h3><div class="grid3">' +
+        '<div class="field"><label for="nd-name">Full name</label><input id="nd-name" maxlength="80" required></div>' +
+        '<div class="field"><label for="nd-title">Role</label><input id="nd-title" maxlength="60" value="Director"></div>' +
+        '<div class="field"><label for="nd-photo">Photo (optional)</label><input id="nd-photo" type="file" accept="image/*"></div>' +
+      '</div><div class="row" style="margin-top:14px"><button class="btn btn-primary" type="submit">Add director</button></div></form>' +
+      '<div class="list" style="margin-top:16px">' + (rows || '<div class="card empty">No directors yet.</div>') + '</div>';
+  };
+  AFTER.board = function(){
+    $('#add-director').addEventListener('submit', function(e){
+      e.preventDefault();
+      var btn = e.target.querySelector('button[type="submit"]'); btn.disabled = true;
+      var file = $('#nd-photo').files[0];
+      (file ? uploadImage(file, 600) : Promise.resolve(''))
+        .then(function(src){ return call('POST', '/api/admin/directors', { name: $('#nd-name').value, title: $('#nd-title').value || 'Director', photo: src }); })
+        .then(function(){ toast('Director added'); return refresh(); })
+        .catch(fail).then(function(){ btn.disabled = false; });
+    });
+  };
+
+  VIEWS.goals = function(){
+    var gs = state.goals;
+    var rows = gs.map(function(g, i){
+      return '<div class="item goal-item">' +
+        '<div class="field"><label for="g-v-' + g.id + '">Number</label><input id="g-v-' + g.id + '" value="' + esc(g.value) + '" maxlength="12" data-save="goals:' + g.id + ':value"></div>' +
+        '<div class="field"><label for="g-l-' + g.id + '">What it counts</label><input id="g-l-' + g.id + '" value="' + esc(g.label) + '" maxlength="80" data-save="goals:' + g.id + ':label"></div>' +
+        '<div class="field"><label for="g-k-' + g.id + '">Type</label><select id="g-k-' + g.id + '" data-save="goals:' + g.id + ':kind"><option value="target"' + (g.kind === 'target' ? ' selected' : '') + '>2030 target</option><option value="achieved"' + (g.kind === 'achieved' ? ' selected' : '') + '>Achieved so far</option></select></div>' +
+        '<div class="item-actions">' + moveButtons('goals', g.id, i, gs.length) + '<button class="btn btn-danger btn-sm" type="button" data-action="delete" data-table="goals" data-id="' + g.id + '" data-label="this goal">Delete</button></div>' +
+      '</div>';
+    }).join('');
+    return head('Goals & impact', 'The big teal numbers on the website. Mark each as a 2030 target or as a result you have already achieved, so donors know which is which.',
+      '<button class="btn btn-primary" type="button" data-action="add-goal">Add a number</button>') +
+      '<div class="list">' + (rows || '<div class="card empty">No numbers yet.</div>') + '</div>';
+  };
+
+  VIEWS.news = function(){
+    var n = editingNews;
+    var items = state.news.map(function(p){
+      return '<div class="item" style="grid-template-columns:auto 1fr auto">' +
+        (p.photo ? '<img class="avatar" style="border-radius:10px;width:72px;height:54px" src="' + esc(p.photo) + '" alt="">' : '<span class="avatar" style="border-radius:10px;width:72px;height:54px">📰</span>') +
+        '<div style="min-width:0"><strong>' + esc(p.title) + '</strong><div class="hint">' + (prettyDate(p.item_date) || 'No date') + ' · ' + (p.published ? '<span class="pill pill-ok">Published</span>' : '<span class="pill pill-muted">Draft</span>') + '</div></div>' +
+        '<div class="item-actions">' +
+          '<button class="btn btn-ghost btn-sm" type="button" data-action="news-toggle" data-id="' + p.id + '">' + (p.published ? 'Unpublish' : 'Publish') + '</button>' +
+          '<button class="btn btn-ghost btn-sm" type="button" data-action="news-edit" data-id="' + p.id + '">Edit</button>' +
+          '<button class="btn btn-danger btn-sm" type="button" data-action="delete" data-table="news" data-id="' + p.id + '" data-label="this post">Delete</button>' +
+        '</div></div>';
+    }).join('');
+    return head('News & events', 'Share updates, upcoming events and stories. A News section appears on the website as soon as one post is published.') +
+      '<form class="card" id="news-form"><h3>' + (n ? 'Edit post' : 'New post') + '</h3><div class="stack">' +
+        '<div class="grid2"><div class="field"><label for="n-title">Title</label><input id="n-title" maxlength="120" required value="' + esc(n ? n.title : '') + '"></div>' +
+        '<div class="field"><label for="n-date">Date</label><input id="n-date" type="date" value="' + esc(n ? n.item_date : today()) + '"></div></div>' +
+        '<div class="field"><label for="n-body">Text</label><textarea id="n-body" rows="6" maxlength="5000" placeholder="Leave a blank line between paragraphs.">' + esc(n ? n.body : '') + '</textarea></div>' +
+        '<div class="grid2"><div class="field"><label for="n-photo">Photo (optional)</label><input id="n-photo" type="file" accept="image/*">' +
+          (n && n.photo ? '<label class="row hint" style="font-weight:500"><input type="checkbox" id="n-photo-remove"> Remove the current photo</label>' : '') + '</div>' +
+        '<label class="row" style="align-self:end;color:var(--ink);font-size:15px;font-weight:500"><input type="checkbox" id="n-pub"' + (!n || n.published ? ' checked' : '') + '> Publish on the website</label></div>' +
+        '<div class="row"><button class="btn btn-primary" type="submit">' + (n ? 'Save changes' : 'Save post') + '</button>' + (n ? '<button class="btn btn-ghost" type="button" data-action="news-cancel">Cancel</button>' : '') + '</div>' +
+      '</div></form>' +
+      '<div class="list" style="margin-top:16px">' + (items || '<div class="card empty">No posts yet.</div>') + '</div>';
+  };
+  AFTER.news = function(){
+    $('#news-form').addEventListener('submit', function(e){
+      e.preventDefault();
+      var btn = e.target.querySelector('button[type="submit"]'); btn.disabled = true;
+      var file = $('#n-photo').files[0];
+      var remove = $('#n-photo-remove') && $('#n-photo-remove').checked;
+      (file ? uploadImage(file, 1600) : Promise.resolve(null)).then(function(src){
+        var body = { title: $('#n-title').value, item_date: $('#n-date').value, body: $('#n-body').value, published: $('#n-pub').checked };
+        if (src) body.photo = src; else if (remove) body.photo = '';
+        else if (!editingNews) body.photo = '';
+        return editingNews ? call('PUT', '/api/admin/news/' + editingNews.id, body) : call('POST', '/api/admin/news', body);
+      }).then(function(){ toast(editingNews ? 'Post updated' : 'Post saved'); editingNews = null; return refresh(); })
+        .catch(fail).then(function(){ btn.disabled = false; });
+    });
+  };
+
+  VIEWS.volunteers = function(){
+    var all = state.volunteers;
+    var rows = all.filter(function(v){ return volFilter === 'all' || v.status === volFilter; });
+    var count = function(s){ return all.filter(function(v){ return s === 'all' || v.status === s; }).length; };
+    var chips = [['new','New'],['contacted','Contacted'],['archived','Archived'],['all','All']].map(function(c){
+      return '<button class="chip" type="button" data-action="vol-filter" data-filter="' + c[0] + '" aria-pressed="' + (volFilter === c[0]) + '">' + c[1] + ' (' + count(c[0]) + ')</button>';
+    }).join('');
+    var table = rows.length ? '<div class="table-wrap"><table><thead><tr><th>Date</th><th>Name</th><th>Contact</th><th>Wants to help with</th><th>Message</th><th>Status</th><th></th></tr></thead><tbody>' +
+      rows.map(function(v){
+        return '<tr><td class="num">' + new Date(v.created_at).toLocaleDateString() + '</td><td><strong>' + esc(v.name) + '</strong></td>' +
+          '<td><a href="mailto:' + esc(v.email) + '">' + esc(v.email) + '</a>' + (v.phone ? '<div class="hint">' + esc(v.phone) + '</div>' : '') + '</td>' +
+          '<td>' + esc(v.area) + '</td><td><div class="msgtext">' + esc(v.message) + '</div></td>' +
+          '<td><select aria-label="Status for ' + esc(v.name) + '" data-save="volunteers:' + v.id + ':status" style="min-width:130px">' +
+            [['new','New'],['contacted','Contacted'],['archived','Archived']].map(function(o){ return '<option value="' + o[0] + '"' + (v.status === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') +
+          '</select></td><td><button class="btn btn-danger btn-sm" type="button" data-action="delete" data-table="volunteers" data-id="' + v.id + '" data-label="the sign-up from ' + esc(v.name) + '">Delete</button></td></tr>';
+      }).join('') + '</tbody></table></div>'
+      : '<div class="card empty">No ' + (volFilter === 'all' ? '' : volFilter + ' ') + 'sign-ups.</div>';
+    return head('Volunteer sign-ups', 'Everyone who filled in the "Get involved" form on the website. Mark people as contacted once you have replied.',
+      '<button class="btn btn-ghost" type="button" data-action="vol-export"' + (all.length ? '' : ' disabled') + '>Download as spreadsheet</button>') +
+      '<div class="chips" style="margin-bottom:14px">' + chips + '</div>' + table;
+  };
+
+  VIEWS.donations = function(){
+    var ds = state.donations;
+    var year = String(new Date().getFullYear());
+    var gifts = ds.filter(function(d){ return String(d.gift_date).slice(0,4) === year; });
+    var total = gifts.reduce(function(s, d){ return s + d.amount_cents; }, 0);
+    var rows = ds.map(function(d){
+      var big = d.amount_cents >= 25000;
+      return '<tr><td class="num">' + esc(prettyDate(d.gift_date)) + '</td><td><strong>' + esc(d.donor_name) + '</strong>' + (d.donor_email ? '<div class="hint">' + esc(d.donor_email) + '</div>' : '') + '</td>' +
+        '<td class="num"><strong>' + money(d.amount_cents) + '</strong>' + (big ? '<div><span class="pill pill-new">Receipt required</span></div>' : '') + '</td>' +
+        '<td>' + esc(d.method) + (d.note ? '<div class="hint">' + esc(d.note) + '</div>' : '') + '</td><td class="num" style="font-family:var(--mono);font-size:12px">' + receiptNo(d) + '</td>' +
+        '<td><div class="row" style="flex-wrap:nowrap"><button class="btn btn-ghost btn-sm" type="button" data-action="receipt" data-id="' + d.id + '">Receipt</button>' +
+        '<button class="btn btn-danger btn-sm" type="button" data-action="delete" data-table="donations" data-id="' + d.id + '" data-label="the gift from ' + esc(d.donor_name) + '">Delete</button></div></td></tr>';
+    }).join('');
+    return head('Donations & receipts', 'Record gifts that arrive by Zelle, check or cash, and create a tax receipt for the donor. The IRS requires a written receipt for any single gift of $250 or more.',
+      '<button class="btn btn-ghost" type="button" data-action="don-export"' + (ds.length ? '' : ' disabled') + '>Download as spreadsheet</button>') +
+      '<div class="stats"><div class="stat" style="cursor:default"><span class="n">' + money(total) + '</span><span class="l">recorded in ' + year + '</span></div>' +
+        '<div class="stat" style="cursor:default"><span class="n">' + gifts.length + '</span><span class="l">gifts in ' + year + '</span></div>' +
+        '<div class="stat" style="cursor:default"><span class="n">' + gifts.filter(function(d){ return d.amount_cents >= 25000; }).length + '</span><span class="l">gifts of $250 or more</span></div></div>' +
+      '<form class="card" id="add-gift"><h3>Record a gift</h3><div class="grid3">' +
+        '<div class="field"><label for="dg-name">Donor name</label><input id="dg-name" maxlength="120" required></div>' +
+        '<div class="field"><label for="dg-email">Donor email (optional)</label><input id="dg-email" type="email" maxlength="160"></div>' +
+        '<div class="field"><label for="dg-amount">Amount (USD)</label><input id="dg-amount" type="number" min="0.01" step="0.01" inputmode="decimal" required></div>' +
+        '<div class="field"><label for="dg-date">Date received</label><input id="dg-date" type="date" required value="' + today() + '"></div>' +
+        '<div class="field"><label for="dg-method">How it was given</label><select id="dg-method"><option>Zelle</option><option>Check</option><option>Cash</option><option>Card</option><option>Other</option></select></div>' +
+        '<div class="field"><label for="dg-note">Note (optional)</label><input id="dg-note" maxlength="500" placeholder="e.g. In memory of..."></div>' +
+      '</div><div class="row" style="margin-top:14px"><button class="btn btn-primary" type="submit">Record gift</button></div></form>' +
+      '<div style="margin-top:16px">' + (rows ? '<div class="table-wrap"><table><thead><tr><th>Date</th><th>Donor</th><th>Amount</th><th>Method</th><th>Receipt no.</th><th></th></tr></thead><tbody>' + rows + '</tbody></table></div>' : '<div class="card empty">No gifts recorded yet.</div>') + '</div>';
+  };
+  AFTER.donations = function(){
+    $('#add-gift').addEventListener('submit', function(e){
+      e.preventDefault();
+      var btn = e.target.querySelector('button[type="submit"]'); btn.disabled = true;
+      var cents = Math.round(parseFloat($('#dg-amount').value) * 100);
+      call('POST', '/api/admin/donations', {
+        donor_name: $('#dg-name').value, donor_email: $('#dg-email').value, amount_cents: cents,
+        gift_date: $('#dg-date').value, method: $('#dg-method').value, note: $('#dg-note').value
+      }).then(function(row){ state.donations.unshift(row); toast('Gift recorded'); return refresh().then(function(){ openReceipt(row.id); }); })
+        .catch(fail).then(function(){ btn.disabled = false; });
+    });
+  };
+
+  VIEWS.settings = function(){
+    var s = state.settings;
+    var f = function(key, label, hint, attrs){ return '<div class="field"><label for="s-' + key + '">' + label + '</label><input id="s-' + key + '" value="' + esc(s[key]) + '" ' + (attrs || '') + '>' + (hint ? '<span class="hint">' + hint + '</span>' : '') + '</div>'; };
+    return head('Site details', 'Contact details and the words at the top of the home page.') +
+      '<form class="card" id="settings-form"><h3>Top of the home page</h3><div class="stack">' +
+        f('headline', 'Headline', 'Put *asterisks* around words to show them in teal, for example: Building *brighter futures* for families in Ada.', 'maxlength="160"') +
+        '<div class="field"><label for="s-lede">Introduction</label><textarea id="s-lede" rows="4" maxlength="600">' + esc(s.lede) + '</textarea></div>' +
+      '</div><h3 style="margin-top:24px">Contact & giving</h3><div class="grid2">' +
+        f('phone', 'Phone number', '', 'maxlength="40"') +
+        f('zelle', 'Zelle number or email', 'Shown in the Donate section.', 'maxlength="40"') +
+        f('email', 'Email address', '', 'type="email" maxlength="160"') +
+        f('city', 'City', 'Shown in the footer.', 'maxlength="80"') +
+      '</div><div class="row" style="margin-top:18px"><button class="btn btn-primary" type="submit">Save changes</button></div></form>' +
+      '<div class="card"><h3>Changing the dashboard password</h3><p class="hint" style="font-size:14px">For security the password is stored with Cloudflare, not in this dashboard. To change it, open Terminal on the computer that manages the website and run:</p>' +
+        '<pre style="background:var(--bg);padding:12px 14px;border-radius:10px;overflow-x:auto;font:500 13px/1.6 var(--mono)">cd ~/Desktop/vscode/adafoundation\nnpx wrangler secret put ADMIN_PASSWORD</pre><p class="hint" style="font-size:14px">Type the new password when asked. Everyone signed in will be signed out.</p></div>';
+  };
+  AFTER.settings = function(){
+    $('#settings-form').addEventListener('submit', function(e){
+      e.preventDefault();
+      var body = {}; ['headline','lede','phone','zelle','email','city'].forEach(function(k){ body[k] = $('#s-' + k).value; });
+      call('PUT', '/api/admin/settings', body).then(function(s){ state.settings = s; toast('Saved. The website is updated.'); }).catch(fail);
+    });
+  };
+
+  /* ---------- actions ---------- */
+
+  var ACTIONS = {
+    logout: function(){ call('POST', '/api/logout').catch(function(){}).then(function(){ showLogin('You are signed out.', true); }); },
+    delete: function(el){
+      if (!confirm('Delete ' + el.dataset.label + '? This cannot be undone.')) return;
+      call('DELETE', '/api/admin/' + el.dataset.table + '/' + el.dataset.id).then(function(){ toast('Deleted'); return refresh(); }).catch(fail);
+    },
+    move: function(el){
+      var list = state[el.dataset.table].slice();
+      var i = list.findIndex(function(r){ return String(r.id) === el.dataset.id; });
+      var j = i + Number(el.dataset.dir);
+      if (j < 0 || j >= list.length) return;
+      var tmp = list[i]; list[i] = list[j]; list[j] = tmp;
+      state[el.dataset.table] = list; render();
+      call('PUT', '/api/admin/' + el.dataset.table + '/order', { ids: list.map(function(r){ return r.id; }) }).catch(function(err){ fail(err); refresh(); });
+    },
+    'director-photo': function(el){
+      pickFile(function(file){
+        toast('Uploading photo...');
+        uploadImage(file, 600).then(function(src){ return call('PUT', '/api/admin/directors/' + el.dataset.id, { photo: src }); })
+          .then(function(){ toast('Photo updated'); return refresh(); }).catch(fail);
+      });
+    },
+    'director-photo-remove': function(el){
+      call('PUT', '/api/admin/directors/' + el.dataset.id, { photo: '' }).then(function(){ toast('Photo removed'); return refresh(); }).catch(fail);
+    },
+    'add-goal': function(){
+      call('POST', '/api/admin/goals', { value: '0', label: 'New goal', kind: 'target' }).then(function(){ toast('Added. Type the number and what it counts.'); return refresh(); }).catch(fail);
+    },
+    'news-edit': function(el){ editingNews = state.news.find(function(n){ return String(n.id) === el.dataset.id; }); render(); window.scrollTo(0, 0); },
+    'news-cancel': function(){ editingNews = null; render(); },
+    'news-toggle': function(el){
+      var n = state.news.find(function(x){ return String(x.id) === el.dataset.id; });
+      call('PUT', '/api/admin/news/' + n.id, { published: !n.published }).then(function(){ toast(n.published ? 'Post hidden from the website' : 'Post published'); return refresh(); }).catch(fail);
+    },
+    'vol-filter': function(el){ volFilter = el.dataset.filter; render(); },
+    'vol-export': function(){
+      download('acif-volunteers-' + today() + '.csv', csv(state.volunteers, [
+        ['Date', function(v){ return new Date(v.created_at).toISOString().slice(0,10); }], ['Name', function(v){ return v.name; }],
+        ['Email', function(v){ return v.email; }], ['Phone', function(v){ return v.phone; }], ['Area', function(v){ return v.area; }],
+        ['Message', function(v){ return v.message; }], ['Status', function(v){ return v.status; }]
+      ]));
+    },
+    'don-export': function(){
+      download('acif-donations-' + today() + '.csv', csv(state.donations, [
+        ['Receipt no.', receiptNo], ['Date', function(d){ return d.gift_date; }], ['Donor', function(d){ return d.donor_name; }],
+        ['Email', function(d){ return d.donor_email; }], ['Amount (USD)', function(d){ return (d.amount_cents / 100).toFixed(2); }],
+        ['Method', function(d){ return d.method; }], ['Note', function(d){ return d.note; }]
+      ]));
+    },
+    receipt: function(el){ openReceipt(Number(el.dataset.id)); },
+    'close-receipt': function(){ $('#receipt-modal').hidden = true; },
+    'print-receipt': function(){ window.print(); },
+    'copy-receipt': function(el){
+      var text = $('#receipt-body').innerText;
+      (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(function(){ toast('Receipt copied. Paste it into an email to the donor.'); })
+        .catch(function(){ var r = document.createRange(); r.selectNodeContents($('#receipt-body')); var s = getSelection(); s.removeAllRanges(); s.addRange(r); toast('Receipt selected. Press Copy.'); });
+    }
+  };
+
+  function openReceipt(id){
+    var d = state.donations.find(function(x){ return x.id === id; });
+    if (!d) return;
+    var s = state.settings;
+    var body =
+      '<div class="receipt" id="receipt-body">' +
+        '<h4>' + LEGAL + '</h4>' +
+        '<p class="meta">' + esc(s.city || 'Chicago, Illinois') + ' · EIN ' + EIN + ' · ' + esc(s.email || '') + '</p>' +
+        '<p style="margin-top:20px"><strong>Donation receipt ' + receiptNo(d) + '</strong><br><span class="meta">Issued ' + new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) + '</span></p>' +
+        '<p style="margin-top:14px">Dear ' + esc(d.donor_name) + ',</p>' +
+        '<p>Thank you for your generous gift to ' + LEGAL + '. Your support helps families in Ada, Ghana, with education, health, clean water and livelihoods.</p>' +
+        '<dl><dt>Donor</dt><dd>' + esc(d.donor_name) + '</dd><dt>Date of gift</dt><dd>' + esc(prettyDate(d.gift_date)) + '</dd><dt>Amount</dt><dd>' + money(d.amount_cents) + ' (USD)</dd><dt>Method</dt><dd>' + esc(d.method) + '</dd></dl>' +
+        '<p class="statement"><strong>No goods or services were provided in exchange for this contribution.</strong></p>' +
+        '<p>' + LEGAL + ' is a tax-exempt organization under Section 501(c)(3) of the Internal Revenue Code (EIN ' + EIN + '). Please keep this receipt for your tax records.</p>' +
+        '<p style="margin-top:14px">With gratitude,<br>' + LEGAL + '</p>' +
+      '</div>';
+    var mail = d.donor_email ? '<a class="btn btn-ghost" href="mailto:' + encodeURIComponent(d.donor_email) + '?subject=' + encodeURIComponent('Your donation receipt ' + receiptNo(d)) + '">Email donor</a>' : '';
+    var m = $('#receipt-modal');
+    m.innerHTML = '<div class="modal-card" role="dialog" aria-modal="true" aria-label="Donation receipt">' + body +
+      '<div class="row no-print" style="justify-content:space-between"><div class="row"><button class="btn btn-primary" type="button" data-action="print-receipt">Print or save as PDF</button>' +
+      '<button class="btn btn-ghost" type="button" data-action="copy-receipt">Copy text</button>' + mail + '</div>' +
+      '<button class="btn btn-ghost" type="button" data-action="close-receipt">Close</button></div></div>';
+    m.hidden = false;
+  }
+  document.addEventListener('keydown', function(e){ if (e.key === 'Escape') $('#receipt-modal').hidden = true; });
+  $('#receipt-modal').addEventListener('click', function(e){ if (e.target.id === 'receipt-modal') e.target.hidden = true; });
+
+  /* ---------- start ---------- */
+
+  var hash = location.hash.slice(1);
+  if (TABS.some(function(t){ return t[0] === hash; })) tab = hash;
+  call('GET', '/api/admin/session').then(function(s){
+    if (!s.configured) return showLogin('The dashboard password has not been set up yet.', true);
+    if (!s.signedIn) return showLogin('');
+    return load();
+  }).catch(function(){ showLogin('The dashboard could not reach the server. Check your connection and refresh.'); });
+})();
+</script>
+</body>
+</html>
