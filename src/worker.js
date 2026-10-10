@@ -8,6 +8,8 @@ const SESSION_COOKIE = 'acif_session';
 const SESSION_HOURS = 12;
 const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
 const IMAGE_TYPES = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif' };
+const VIDEO_TYPES = { 'video/mp4': 'mp4', 'video/webm': 'webm', 'video/quicktime': 'mov' };
+const MAX_VIDEO_BYTES = 95 * 1024 * 1024; // Workers accept request bodies up to 100 MB
 const DEFAULT_HERO = '/images/hero-canoes.jpg';
 const ALERT_FROM = { email: 'alerts@adacommunityimpactfoundation.org', name: 'ACIF Website' };
 const SITE_URL = 'https://adacommunityimpactfoundation.org';
@@ -31,6 +33,19 @@ const TABLES = {
   goals: {
     order: 'sort, id', sortable: true,
     fields: { value: { max: 12, required: true }, label: { max: 80, required: true }, kind: { oneOf: ['target', 'achieved'] }, sort: { int: true } },
+  },
+  videos: {
+    order: 'sort, id', sortable: true,
+    fields: {
+      kind: { oneOf: ['youtube', 'vimeo', 'file'], required: true, createOnly: true }, ref: { max: 300, required: true, createOnly: true },
+      title: { max: 120 }, caption: { max: 300 }, poster: { src: true }, published: { bool: true }, sort: { int: true },
+    },
+    check: (v) => {
+      if (v.kind === 'youtube' && !/^[\w-]{11}$/.test(v.ref)) return 'That YouTube link is not valid.';
+      if (v.kind === 'vimeo' && !/^\d{6,12}$/.test(v.ref)) return 'That Vimeo link is not valid.';
+      if (v.kind === 'file' && !/^\/media\/[\w-]+\.(mp4|webm|mov)$/.test(v.ref)) return 'Upload the video first.';
+      return '';
+    },
   },
   news: {
     order: 'item_date DESC, id DESC',
@@ -62,7 +77,7 @@ export default {
     const path = url.pathname;
     try {
       if (path.startsWith('/api/')) return await api(req, env, url, ctx);
-      if (path.startsWith('/media/')) return await media(env, decodeURIComponent(path.slice(7)));
+      if (path.startsWith('/media/')) return await media(req, env, decodeURIComponent(path.slice(7)));
       if (path === '/' || path === '/index.html') return await renderHome(req, env);
       return env.ASSETS.fetch(req);
     } catch (err) {
@@ -317,6 +332,7 @@ async function getSettings(env) {
 function validate(rules, body, partial) {
   const values = {};
   for (const [field, rule] of Object.entries(rules)) {
+    if (partial && rule.createOnly) continue;
     if (!(field in body)) {
       if (!partial && rule.required) return { error: `Please fill in ${field.replace(/_/g, ' ')}.` };
       continue;
@@ -349,6 +365,10 @@ async function createRow(req, env, name, table) {
   if (!body) return json({ error: 'Nothing to save.' }, 400);
   const { values, error } = validate(table.fields, body, false);
   if (error) return json({ error }, 400);
+  if (table.check) {
+    const problem = table.check(values);
+    if (problem) return json({ error: problem }, 400);
+  }
   if (table.maxRows) {
     const count = await env.DB.prepare(`SELECT COUNT(*) AS n FROM ${name}`).first();
     if (count.n >= table.maxRows) return json({ error: `You can have up to ${table.maxRows}. Delete one first.` }, 400);
@@ -379,7 +399,7 @@ async function updateRow(req, env, name, table, id) {
     .bind(...cols.map((c) => values[c]), id).first();
   if (name === 'photos' && row.placement === 'hero') await onlyOneHero(env, id);
   if (name === 'donation_options' && row.is_default) await onlyOneDefault(env, id);
-  for (const field of ['photo', 'src']) {
+  for (const field of ['photo', 'src', 'ref', 'poster']) {
     if (before[field] && before[field] !== row[field]) await removeMediaIfUnused(env, before[field]);
   }
   return json(row);
@@ -389,7 +409,7 @@ async function deleteRow(env, name, id) {
   const before = await env.DB.prepare(`SELECT * FROM ${name} WHERE id = ?`).bind(id).first();
   if (!before) return json({ ok: true });
   await env.DB.prepare(`DELETE FROM ${name} WHERE id = ?`).bind(id).run();
-  for (const field of ['photo', 'src']) if (before[field]) await removeMediaIfUnused(env, before[field]);
+  for (const field of ['photo', 'src', 'ref', 'poster']) if (before[field]) await removeMediaIfUnused(env, before[field]);
   return json({ ok: true });
 }
 
@@ -412,7 +432,8 @@ async function onlyOneDefault(env, keepId) {
 async function removeMediaIfUnused(env, src) {
   if (!src.startsWith('/media/')) return;
   const used = await env.DB.prepare(
-    'SELECT (SELECT COUNT(*) FROM directors WHERE photo = ?1) + (SELECT COUNT(*) FROM photos WHERE src = ?1) + (SELECT COUNT(*) FROM news WHERE photo = ?1) AS n'
+    'SELECT (SELECT COUNT(*) FROM directors WHERE photo = ?1) + (SELECT COUNT(*) FROM photos WHERE src = ?1) + (SELECT COUNT(*) FROM news WHERE photo = ?1)' +
+    ' + (SELECT COUNT(*) FROM videos WHERE ref = ?1 OR poster = ?1) AS n'
   ).bind(src).first();
   if (used.n === 0) await env.MEDIA.delete(src.slice(7));
 }
@@ -437,27 +458,45 @@ async function saveSettings(req, env) {
 
 async function upload(req, env) {
   const type = (req.headers.get('content-type') || '').split(';')[0].trim();
-  const ext = IMAGE_TYPES[type];
-  if (!ext) return json({ error: 'Upload a JPG, PNG, WebP or GIF photo.' }, 415);
+  const isVideo = type in VIDEO_TYPES;
+  const ext = IMAGE_TYPES[type] || VIDEO_TYPES[type];
+  if (!ext) return json({ error: 'Upload a photo (JPG, PNG, WebP or GIF) or a video (MP4, MOV or WebM).' }, 415);
+  const max = isVideo ? MAX_VIDEO_BYTES : MAX_UPLOAD_BYTES;
+  const tooBig = isVideo ? 'That video is too large (95 MB max). Put longer videos on YouTube and add the link instead.' : 'That photo is too large (8 MB max).';
   const size = Number(req.headers.get('content-length') || 0);
-  if (size > MAX_UPLOAD_BYTES) return json({ error: 'That photo is too large (8 MB max).' }, 413);
-  const data = await req.arrayBuffer();
-  if (!data.byteLength) return json({ error: 'The photo was empty.' }, 400);
-  if (data.byteLength > MAX_UPLOAD_BYTES) return json({ error: 'That photo is too large (8 MB max).' }, 413);
+  if (!size || !req.body) return json({ error: 'The file was empty.' }, 400);
+  if (size > max) return json({ error: tooBig }, 413);
   const key = `${crypto.randomUUID()}.${ext}`;
-  await env.MEDIA.put(key, data, { httpMetadata: { contentType: type, cacheControl: 'public, max-age=31536000, immutable' } });
+  // Stream straight into storage so large videos never sit in memory.
+  const { readable, writable } = new FixedLengthStream(size);
+  await Promise.all([
+    req.body.pipeTo(writable),
+    env.MEDIA.put(key, readable, { httpMetadata: { contentType: type, cacheControl: 'public, max-age=31536000, immutable' } }),
+  ]);
   return json({ src: `/media/${key}` }, 201);
 }
 
-async function media(env, key) {
-  if (!/^[\w\-]+\.(jpg|png|webp|gif)$/.test(key)) return new Response('Not found', { status: 404 });
-  const obj = await env.MEDIA.get(key);
+async function media(req, env, key) {
+  if (!/^[\w\-]+\.(jpg|png|webp|gif|mp4|webm|mov)$/.test(key)) return new Response('Not found', { status: 404 });
+  const ranged = req.headers.has('range');
+  const obj = await env.MEDIA.get(key, { range: ranged ? req.headers : undefined, onlyIf: req.headers });
   if (!obj) return new Response('Not found', { status: 404 });
   const headers = new Headers();
   obj.writeHttpMetadata(headers);
   headers.set('etag', obj.httpEtag);
   headers.set('cache-control', 'public, max-age=31536000, immutable');
   headers.set('x-content-type-options', 'nosniff');
+  headers.set('accept-ranges', 'bytes');
+  if (!('body' in obj)) return new Response(null, { status: 304, headers });
+  if (ranged && obj.range) {
+    const r = obj.range;
+    const start = r.suffix != null ? obj.size - r.suffix : (r.offset || 0);
+    const end = r.suffix != null ? obj.size - 1 : (r.length != null ? start + r.length - 1 : obj.size - 1);
+    headers.set('content-range', `bytes ${start}-${end}/${obj.size}`);
+    headers.set('content-length', String(end - start + 1));
+    return new Response(obj.body, { status: 206, headers });
+  }
+  headers.set('content-length', String(obj.size));
   return new Response(obj.body, { headers });
 }
 
@@ -489,13 +528,14 @@ async function renderHome(req, env) {
   const page = await env.ASSETS.fetch(new Request(new URL('/', req.url), { headers: req.headers }));
   if (!page.ok) return page;
 
-  const [directors, photos, goals, news, settings, amounts] = await Promise.all([
+  const [directors, photos, goals, news, settings, amounts, videos] = await Promise.all([
     env.DB.prepare('SELECT * FROM directors ORDER BY sort, id').all().then((r) => r.results),
     env.DB.prepare("SELECT * FROM photos WHERE placement != 'hidden' ORDER BY sort, id").all().then((r) => r.results),
     env.DB.prepare('SELECT * FROM goals ORDER BY sort, id').all().then((r) => r.results),
     env.DB.prepare('SELECT * FROM news WHERE published = 1 ORDER BY item_date DESC, id DESC LIMIT 12').all().then((r) => r.results),
     getSettings(env),
     env.DB.prepare('SELECT * FROM donation_options ORDER BY sort, id').all().then((r) => r.results),
+    env.DB.prepare('SELECT * FROM videos WHERE published = 1 ORDER BY sort, id').all().then((r) => r.results),
   ]);
 
   const hero = photos.find((p) => p.placement === 'hero');
@@ -537,6 +577,20 @@ async function renderHome(req, env) {
     `<button type="button" data-v="${a.amount}" data-impact="${esc(esc(a.impact).replace(/\*(.+?)\*/g, '<strong>$1</strong>'))}" aria-pressed="${a === pick}">$${a.amount.toLocaleString('en-US')}</button>`
   ).join('');
 
+  const videosHtml = videos.map((v) => {
+    let player;
+    if (v.kind === 'file') {
+      player = `<video controls preload="metadata" playsinline${v.poster ? ` poster="${esc(v.poster)}"` : ''} src="${esc(v.ref)}"></video>`;
+    } else {
+      // Show a thumbnail and load the YouTube/Vimeo player only when someone presses play.
+      const thumb = v.poster || (v.kind === 'youtube' ? `https://i.ytimg.com/vi/${v.ref}/hqdefault.jpg` : '');
+      player = `<button type="button" class="video-lite" data-kind="${v.kind}" data-ref="${esc(v.ref)}" data-title="${esc(v.title || 'Video')}" aria-label="Play video${v.title ? ': ' + esc(v.title) : ''}">` +
+        `${thumb ? `<img src="${esc(thumb)}" alt="" loading="lazy">` : ''}<span class="play" aria-hidden="true"></span></button>`;
+    }
+    const body = v.title || v.caption ? `<div class="video-body">${v.title ? `<h3>${esc(v.title)}</h3>` : ''}${v.caption ? `<p>${esc(v.caption)}</p>` : ''}</div>` : '';
+    return `<article class="video-card"><div class="video-frame">${player}</div>${body}</article>`;
+  }).join('');
+
   const set = (value, fn) => ({ element(el) { if (value != null && value !== '') fn(el); } });
   const html = { html: true };
 
@@ -560,6 +614,9 @@ async function renderHome(req, env) {
       el.setAttribute('style', `--n:${amounts.length}`);
       el.setInnerContent(amountsHtml, html);
     }))
+    .on('[data-slot="videos"]', set(videos.length || null, (el) => el.removeAttribute('hidden')))
+    .on('[data-slot="nav-videos"]', set(videos.length || null, (el) => el.removeAttribute('hidden')))
+    .on('[data-slot="videos-list"]', { element(el) { el.setInnerContent(videosHtml, html); } })
     .on('[data-slot="board"]', { element(el) { el.setInnerContent(boardHtml, html); } })
     .on('[data-slot="goals"]', { element(el) { el.setInnerContent(goalsHtml, html); } })
     .on('[data-slot="goals-note"]', { element(el) { el.setInnerContent(goalsNote); } })

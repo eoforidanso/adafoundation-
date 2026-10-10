@@ -184,6 +184,15 @@ td .msgtext{max-width:42ch;white-space:pre-wrap;color:var(--muted)}
 .receipt dd{margin:0;font-weight:600}
 .receipt .statement{border-top:1px solid #E2DACD;padding-top:14px;margin-top:14px}
 
+/* Videos */
+.video-thumb{position:relative;width:160px;aspect-ratio:16/9;border-radius:10px;overflow:hidden;background:#0C2A30;flex:none}
+.video-thumb img,.video-thumb video{width:100%;height:100%;object-fit:cover;display:block}
+.video-thumb .kind{position:absolute;left:6px;top:6px;font:500 10px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;padding:4px 6px;border-radius:999px;background:#000a;color:#fff}
+.video-item{grid-template-columns:auto 1fr auto}
+.bar{height:8px;border-radius:999px;background:var(--line);overflow:hidden}
+.bar span{display:block;height:100%;width:0;background:var(--river);transition:width .2s ease}
+@media (max-width:720px){.video-item{grid-template-columns:1fr}.video-thumb{width:100%}}
+
 /* Framing editor */
 .frame-card{width:min(860px,100%)}
 .frame-layout{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:20px;align-items:start}
@@ -260,6 +269,7 @@ input[type="range"]{padding:0;border:0;accent-color:var(--river)}
   var TABS = [
     ['overview', 'Overview'],
     ['photos', 'Photos'],
+    ['videos', 'Videos'],
     ['board', 'Board'],
     ['goals', 'Goals'],
     ['amounts', 'Donate amounts'],
@@ -500,6 +510,106 @@ input[type="range"]{padding:0;border:0;accent-color:var(--river)}
     drop.addEventListener('drop', function(e){ handle(e.dataTransfer.files); });
   };
 
+  // Turn a pasted YouTube or Vimeo link into { kind, ref }.
+  function parseVideoLink(url){
+    url = String(url || '').trim();
+    var m = url.match(/(?:youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|live\/)|youtu\.be\/)([\w-]{11})/);
+    if (m) return { kind: 'youtube', ref: m[1] };
+    m = url.match(/vimeo\.com\/(?:video\/|channels\/[\w-]+\/|groups\/[\w-]+\/videos\/)?(\d{6,12})/);
+    if (m) return { kind: 'vimeo', ref: m[1] };
+    return null;
+  }
+  function videoThumb(v){
+    if (v.poster) return '<img src="' + esc(v.poster) + '" alt="">';
+    if (v.kind === 'youtube') return '<img src="https://i.ytimg.com/vi/' + esc(v.ref) + '/hqdefault.jpg" alt="">';
+    if (v.kind === 'file') return '<video src="' + esc(v.ref) + '#t=1" preload="metadata" muted playsinline></video>';
+    return '';
+  }
+  // Videos go up with XMLHttpRequest so we can show upload progress.
+  function uploadVideo(file, onProgress){
+    return new Promise(function(resolve, reject){
+      var x = new XMLHttpRequest();
+      x.open('POST', '/api/admin/upload');
+      x.setRequestHeader('x-acif-admin', '1');
+      x.setRequestHeader('content-type', file.type);
+      x.upload.onprogress = function(e){ if (e.lengthComputable) onProgress(e.loaded / e.total); };
+      x.onload = function(){
+        var j = {}; try { j = JSON.parse(x.responseText); } catch (e) {}
+        if (x.status === 401) { showLogin('Your session has ended. Please sign in again.'); return reject(new Error('Signed out')); }
+        if (x.status >= 200 && x.status < 300) resolve(j.src); else reject(new Error(j.error || 'The video could not be uploaded.'));
+      };
+      x.onerror = function(){ reject(new Error('The upload was interrupted. Check your connection and try again.')); };
+      x.send(file);
+    });
+  }
+
+  VIEWS.videos = function(){
+    var list = state.videos;
+    var rows = list.map(function(v, i){
+      var kindLabel = v.kind === 'file' ? 'Uploaded' : v.kind === 'youtube' ? 'YouTube' : 'Vimeo';
+      return '<div class="item video-item">' +
+        '<div class="stack" style="gap:6px;justify-items:center"><div class="video-thumb">' + videoThumb(v) + '<span class="kind">' + kindLabel + '</span></div>' +
+          '<div class="row" style="gap:8px"><button class="linkish" type="button" data-action="video-cover" data-id="' + v.id + '">' + (v.poster ? 'Change cover' : 'Add cover image') + '</button>' +
+          (v.poster ? '<button class="linkish" type="button" data-action="video-cover-remove" data-id="' + v.id + '">Remove cover</button>' : '') + '</div></div>' +
+        '<div class="stack" style="gap:10px;min-width:0">' +
+          '<div class="field"><label for="v-t-' + v.id + '">Title</label><input id="v-t-' + v.id + '" value="' + esc(v.title) + '" maxlength="120" data-save="videos:' + v.id + ':title"></div>' +
+          '<div class="field"><label for="v-c-' + v.id + '">Short description</label><input id="v-c-' + v.id + '" value="' + esc(v.caption) + '" maxlength="300" data-save="videos:' + v.id + ':caption"></div>' +
+          '<label class="row" style="color:var(--ink);font-size:14px;font-weight:500"><input type="checkbox" data-save="videos:' + v.id + ':published"' + (v.published ? ' checked' : '') + '> Show on the website</label>' +
+        '</div>' +
+        '<div class="item-actions">' + moveButtons('videos', v.id, i, list.length) +
+          '<button class="btn btn-danger btn-sm" type="button" data-action="delete" data-table="videos" data-id="' + v.id + '" data-label="this video">Delete</button></div>' +
+      '</div>';
+    }).join('');
+    return head('Videos', 'Videos appear in a Videos section on the home page, in this order. Use YouTube or Vimeo for longer videos; upload short clips directly.') +
+      '<div class="grid2">' +
+        '<form class="card" id="video-link-form" style="margin:0"><h3>Add a YouTube or Vimeo video</h3><div class="stack">' +
+          '<div class="field"><label for="vl-url">Video link</label><input id="vl-url" placeholder="https://www.youtube.com/watch?v=..." required></div>' +
+          '<div class="field"><label for="vl-title">Title</label><input id="vl-title" maxlength="120"></div>' +
+          '<div class="field"><label for="vl-cap">Short description (optional)</label><input id="vl-cap" maxlength="300"></div>' +
+          '<div class="row"><button class="btn btn-primary" type="submit">Add video</button></div>' +
+          '<p class="hint">Tip: on YouTube you can upload as <strong>Unlisted</strong> so the video only shows on your website.</p>' +
+        '</div></form>' +
+        '<form class="card" id="video-upload-form" style="margin:0"><h3>Upload a short video</h3><div class="stack">' +
+          '<div class="field"><label for="vu-file">Video file</label><input id="vu-file" type="file" accept="video/mp4,video/quicktime,video/webm" required><span class="hint">MP4, MOV or WebM, up to 95 MB (about 1 to 2 minutes of phone video).</span></div>' +
+          '<div class="field"><label for="vu-title">Title</label><input id="vu-title" maxlength="120"></div>' +
+          '<div class="field"><label for="vu-cap">Short description (optional)</label><input id="vu-cap" maxlength="300"></div>' +
+          '<div id="vu-progress" hidden><div class="bar"><span id="vu-bar"></span></div><p class="progress" id="vu-text" style="margin-top:6px"></p></div>' +
+          '<div class="row"><button class="btn btn-primary" type="submit" id="vu-btn">Upload video</button></div>' +
+        '</div></form>' +
+      '</div>' +
+      '<div class="list" style="margin-top:16px">' + (rows || '<div class="card empty">No videos yet. The Videos section appears on the website once you add one.</div>') + '</div>';
+  };
+  AFTER.videos = function(){
+    $('#video-link-form').addEventListener('submit', function(e){
+      e.preventDefault();
+      var parsed = parseVideoLink($('#vl-url').value);
+      if (!parsed) { toast('Paste a YouTube or Vimeo link, for example https://www.youtube.com/watch?v=...', true); return; }
+      var btn = e.target.querySelector('button[type="submit"]'); btn.disabled = true;
+      call('POST', '/api/admin/videos', { kind: parsed.kind, ref: parsed.ref, title: $('#vl-title').value, caption: $('#vl-cap').value, published: true })
+        .then(function(){ toast('Video added to the website'); return refresh(); })
+        .catch(fail).then(function(){ btn.disabled = false; });
+    });
+    $('#video-upload-form').addEventListener('submit', function(e){
+      e.preventDefault();
+      var file = $('#vu-file').files[0];
+      if (!file) return;
+      if (!/^video\/(mp4|quicktime|webm)$/.test(file.type)) { toast('Choose an MP4, MOV or WebM video.', true); return; }
+      if (file.size > 95 * 1024 * 1024) { toast('That video is ' + Math.round(file.size / 1048576) + ' MB. The limit is 95 MB, so put it on YouTube and add the link instead.', true); return; }
+      var btn = $('#vu-btn'); btn.disabled = true;
+      $('#vu-progress').hidden = false;
+      var title = $('#vu-title').value, cap = $('#vu-cap').value;
+      uploadVideo(file, function(f){
+        $('#vu-bar').style.width = Math.round(f * 100) + '%';
+        var mb = file.size / 1048576;
+        $('#vu-text').textContent = 'Uploading ' + Math.round(f * 100) + '% of ' + (mb < 10 ? mb.toFixed(1) : Math.round(mb)) + ' MB...';
+      }).then(function(src){
+        $('#vu-text').textContent = 'Saving...';
+        return call('POST', '/api/admin/videos', { kind: 'file', ref: src, title: title, caption: cap, published: true });
+      }).then(function(){ toast('Video uploaded and added to the website'); return refresh(); })
+        .catch(function(err){ fail(err); btn.disabled = false; $('#vu-progress').hidden = true; });
+    });
+  };
+
   VIEWS.board = function(){
     var ds = state.directors;
     var rows = ds.map(function(d, i){
@@ -733,6 +843,16 @@ input[type="range"]{padding:0;border:0;accent-color:var(--river)}
     'amount-default': function(el){
       call('PUT', '/api/admin/donation_options/' + el.dataset.id, { is_default: true })
         .then(function(){ toast('Saved'); return refresh(); }).catch(function(err){ fail(err); refresh(); });
+    },
+    'video-cover': function(el){
+      pickFile(function(file){
+        toast('Uploading cover image...');
+        uploadImage(file, 1600).then(function(src){ return call('PUT', '/api/admin/videos/' + el.dataset.id, { poster: src }); })
+          .then(function(){ toast('Cover image saved'); return refresh(); }).catch(fail);
+      });
+    },
+    'video-cover-remove': function(el){
+      call('PUT', '/api/admin/videos/' + el.dataset.id, { poster: '' }).then(function(){ toast('Cover image removed'); return refresh(); }).catch(fail);
     },
     'add-goal': function(){
       call('POST', '/api/admin/goals', { value: '0', label: 'New goal', kind: 'target' }).then(function(){ toast('Added. Type the number and what it counts.'); return refresh(); }).catch(fail);

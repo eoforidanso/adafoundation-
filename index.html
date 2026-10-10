@@ -219,6 +219,22 @@ section{padding-block:clamp(64px,9vw,112px)}
 .avatar-photo img{width:100%;height:100%;object-fit:cover;display:block}
 .hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
 
+/* Videos */
+.videos{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,340px),1fr));gap:20px}
+.video-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;display:flex;flex-direction:column;min-width:0}
+.video-frame{position:relative;aspect-ratio:16/9;max-width:100%;background:#0C2A30}
+.video-frame video,.video-frame iframe,.video-lite{position:absolute;inset:0;width:100%;height:100%;border:0;display:block}
+.video-frame video{object-fit:contain;background:#000}
+.video-lite{padding:0;cursor:pointer;background:#0C2A30}
+.video-lite img{width:100%;height:100%;object-fit:cover;display:block;opacity:.92;transition:opacity .2s ease}
+.video-lite:hover img{opacity:1}
+.video-lite .play{position:absolute;left:50%;top:50%;width:68px;height:68px;margin:-34px 0 0 -34px;border-radius:50%;background:var(--river);box-shadow:0 8px 30px rgba(0,0,0,.35);transition:transform .2s ease}
+.video-lite .play::after{content:"";position:absolute;left:27px;top:21px;border-style:solid;border-width:13px 0 13px 21px;border-color:transparent transparent transparent #fff}
+.video-lite:hover .play{transform:scale(1.08)}
+.video-body{padding:18px 20px;display:grid;gap:6px}
+.video-body h3{font-size:20px;font-weight:700}
+.video-body p{color:var(--muted);font-size:15px}
+
 /* Board */
 .board{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
 @media (max-width:1060px){.board{grid-template-columns:repeat(2,1fr)}}
@@ -285,6 +301,7 @@ footer a:hover{color:var(--band-fg)}
     </a>
     <ul>
       <li><a href="#about">About Ada</a></li>
+      <li data-slot="nav-videos" hidden><a href="#videos">Videos</a></li>
       <li><a href="#programs">Our work</a></li>
       <li><a href="#goals">Goals</a></li>
       <li data-slot="nav-news" hidden><a href="#news">News</a></li>
@@ -344,6 +361,19 @@ footer a:hover{color:var(--band-fg)}
         <figure class="ph"><img src="images/salt-mounds.jpg" alt="Rows of thatched salt mounds waiting to be harvested on the Songor Lagoon" loading="lazy" width="1200" height="800"><figcaption>Salt mounds waiting for harvest</figcaption></figure>
         <figure class="ph"><img src="images/volta-sunset.jpg" alt="A woman carrying a basin on her head, silhouetted against the sunset over the Lower Volta" loading="lazy" width="1200" height="675"><figcaption>Evening on the Lower Volta</figcaption></figure>
       </div>
+    </div>
+  </section>
+
+  <section id="videos" data-slot="videos" hidden>
+    <div class="wrap">
+      <div class="sec-head">
+        <div>
+          <p class="eyebrow">Videos</p>
+          <h2>See the work <span class="hl">in Ada</span></h2>
+        </div>
+        <p>Short films from our programmes and the communities we serve.</p>
+      </div>
+      <div class="videos" data-slot="videos-list"></div>
     </div>
   </section>
 
@@ -583,6 +613,19 @@ footer a:hover{color:var(--band-fg)}
   });
 
   render();
+
+  // Load the YouTube/Vimeo player only when someone presses play.
+  document.addEventListener('click', function(e){
+    var btn = e.target.closest('.video-lite'); if (!btn) return;
+    var ref = btn.dataset.ref, src = '';
+    if (btn.dataset.kind === 'youtube' && /^[\w-]{11}$/.test(ref)) src = 'https://www.youtube-nocookie.com/embed/' + ref + '?autoplay=1&rel=0';
+    if (btn.dataset.kind === 'vimeo' && /^\d+$/.test(ref)) src = 'https://player.vimeo.com/video/' + ref + '?autoplay=1&dnt=1';
+    if (!src) return;
+    var frame = document.createElement('iframe');
+    frame.src = src; frame.title = btn.dataset.title || 'Video';
+    frame.allow = 'autoplay; encrypted-media; picture-in-picture; fullscreen'; frame.allowFullscreen = true;
+    btn.replaceWith(frame);
+  });
 
   var form = document.getElementById('vol-form'), status = document.getElementById('v-status');
   form.addEventListener('submit', function(e){
