@@ -146,12 +146,14 @@ main{padding:32px clamp(16px,4vw,48px) 64px;min-width:0}
 .avatar-wrap{display:grid;gap:4px;justify-items:center}
 .linkish{background:none;border:0;color:var(--river);font:600 12px/1.2 var(--body);cursor:pointer;padding:2px}
 .goal-item{grid-template-columns:110px 1fr 170px auto}
+.amount-item{grid-template-columns:120px 1fr auto auto}
 @media (max-width:720px){
   .item{grid-template-columns:auto 1fr}
   .item-actions{grid-column:1/-1;justify-content:flex-end}
   .item-fields{grid-template-columns:1fr}
   .goal-item{grid-template-columns:1fr 1fr}
   .goal-item .item-actions{grid-column:1/-1}
+  .amount-item{grid-template-columns:1fr}
 }
 
 /* Tables */
@@ -260,6 +262,7 @@ input[type="range"]{padding:0;border:0;accent-color:var(--river)}
     ['photos', 'Photos'],
     ['board', 'Board'],
     ['goals', 'Goals'],
+    ['amounts', 'Donate amounts'],
     ['news', 'News & events'],
     ['volunteers', 'Volunteers'],
     ['donations', 'Donations & receipts'],
@@ -547,6 +550,24 @@ input[type="range"]{padding:0;border:0;accent-color:var(--river)}
       '<div class="list">' + (rows || '<div class="card empty">No numbers yet.</div>') + '</div>';
   };
 
+  VIEWS.amounts = function(){
+    var list = state.donation_options;
+    var rows = list.map(function(a, i){
+      return '<div class="item amount-item">' +
+        '<div class="field"><label for="a-v-' + a.id + '">Amount ($)</label><input id="a-v-' + a.id + '" type="number" min="1" step="1" inputmode="numeric" value="' + a.amount + '" data-save="donation_options:' + a.id + ':amount"></div>' +
+        '<div class="field"><label for="a-i-' + a.id + '">What it pays for</label><input id="a-i-' + a.id + '" value="' + esc(a.impact) + '" maxlength="200" data-save="donation_options:' + a.id + ':impact" placeholder="can buy *school books* for a pupil"></div>' +
+        '<label class="row" style="color:var(--ink);font-size:14px;font-weight:500;white-space:nowrap"><input type="radio" name="amount-default" data-action="amount-default" data-id="' + a.id + '"' + (a.is_default ? ' checked' : '') + '> Selected first</label>' +
+        '<div class="item-actions">' + moveButtons('donation_options', a.id, i, list.length) +
+          '<button class="btn btn-danger btn-sm" type="button" data-action="delete" data-table="donation_options" data-id="' + a.id + '" data-label="the $' + a.amount + ' button">Delete</button></div>' +
+      '</div>';
+    }).join('');
+    var preview = list.map(function(a){ return '<span class="pill ' + (a.is_default ? 'pill-ok' : 'pill-muted') + '" style="font-size:13px;padding:8px 12px">$' + a.amount.toLocaleString('en-US') + '</span>'; }).join(' ');
+    return head('Donate amounts', 'The amount buttons in the Donate section of the website, and the line that explains what each gift pays for. Put *asterisks* around words to show them in bold. Donors can still type any amount of their own.',
+      '<button class="btn btn-primary" type="button" data-action="add-amount"' + (list.length >= 6 ? ' disabled title="Up to 6 amounts"' : '') + '>Add an amount</button>') +
+      (list.length ? '<div class="card" style="margin-bottom:16px"><h3 style="margin-bottom:10px">How the buttons look</h3><div class="row">' + preview + '</div><p class="hint" style="margin-top:10px">Up to 6 amounts. A typed-in amount shows the line for the nearest button below it.</p></div>' : '') +
+      '<div class="list">' + (rows || '<div class="card empty">No amounts yet. Donors will only see the box for typing their own amount.</div>') + '</div>';
+  };
+
   VIEWS.news = function(){
     var n = editingNews;
     var items = state.news.map(function(p){
@@ -703,6 +724,15 @@ input[type="range"]{padding:0;border:0;accent-color:var(--river)}
     },
     'director-photo-remove': function(el){
       call('PUT', '/api/admin/directors/' + el.dataset.id, { photo: '' }).then(function(){ toast('Photo removed'); return refresh(); }).catch(fail);
+    },
+    'add-amount': function(){
+      var top = state.donation_options.reduce(function(m, a){ return Math.max(m, a.amount); }, 0);
+      call('POST', '/api/admin/donation_options', { amount: top ? top * 2 : 50, impact: '', is_default: !state.donation_options.length })
+        .then(function(){ toast('Added. Set the amount and what it pays for.'); return refresh(); }).catch(fail);
+    },
+    'amount-default': function(el){
+      call('PUT', '/api/admin/donation_options/' + el.dataset.id, { is_default: true })
+        .then(function(){ toast('Saved'); return refresh(); }).catch(function(err){ fail(err); refresh(); });
     },
     'add-goal': function(){
       call('POST', '/api/admin/goals', { value: '0', label: 'New goal', kind: 'target' }).then(function(){ toast('Added. Type the number and what it counts.'); return refresh(); }).catch(fail);

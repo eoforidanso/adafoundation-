@@ -36,6 +36,10 @@ const TABLES = {
     order: 'item_date DESC, id DESC',
     fields: { title: { max: 120, required: true }, item_date: { date: true }, body: { max: 5000 }, photo: { src: true }, published: { bool: true } },
   },
+  donation_options: {
+    order: 'sort, id', sortable: true, maxRows: 6,
+    fields: { amount: { int: true, required: true, min: 1, max: 1000000 }, impact: { max: 200 }, is_default: { bool: true }, sort: { int: true } },
+  },
   volunteers: {
     order: 'created_at DESC', noCreate: true,
     fields: { status: { oneOf: ['new', 'contacted', 'archived'] } },
@@ -345,6 +349,10 @@ async function createRow(req, env, name, table) {
   if (!body) return json({ error: 'Nothing to save.' }, 400);
   const { values, error } = validate(table.fields, body, false);
   if (error) return json({ error }, 400);
+  if (table.maxRows) {
+    const count = await env.DB.prepare(`SELECT COUNT(*) AS n FROM ${name}`).first();
+    if (count.n >= table.maxRows) return json({ error: `You can have up to ${table.maxRows}. Delete one first.` }, 400);
+  }
   if (table.sortable && !('sort' in values)) {
     const max = await env.DB.prepare(`SELECT COALESCE(MAX(sort), 0) AS m FROM ${name}`).first();
     values.sort = max.m + 1;
@@ -354,6 +362,7 @@ async function createRow(req, env, name, table) {
   const row = await env.DB.prepare(`INSERT INTO ${name} (${cols.join(', ')}) VALUES (${cols.map(() => '?').join(', ')}) RETURNING *`)
     .bind(...cols.map((c) => values[c])).first();
   if (name === 'photos' && row.placement === 'hero') await onlyOneHero(env, row.id);
+  if (name === 'donation_options' && row.is_default) await onlyOneDefault(env, row.id);
   return json(row, 201);
 }
 
@@ -369,6 +378,7 @@ async function updateRow(req, env, name, table, id) {
   const row = await env.DB.prepare(`UPDATE ${name} SET ${cols.map((c) => `${c} = ?`).join(', ')} WHERE id = ? RETURNING *`)
     .bind(...cols.map((c) => values[c]), id).first();
   if (name === 'photos' && row.placement === 'hero') await onlyOneHero(env, id);
+  if (name === 'donation_options' && row.is_default) await onlyOneDefault(env, id);
   for (const field of ['photo', 'src']) {
     if (before[field] && before[field] !== row[field]) await removeMediaIfUnused(env, before[field]);
   }
@@ -393,6 +403,10 @@ async function reorder(req, env, name) {
 
 async function onlyOneHero(env, keepId) {
   await env.DB.prepare("UPDATE photos SET placement = 'gallery' WHERE placement = 'hero' AND id != ?").bind(keepId).run();
+}
+
+async function onlyOneDefault(env, keepId) {
+  await env.DB.prepare('UPDATE donation_options SET is_default = 0 WHERE is_default = 1 AND id != ?').bind(keepId).run();
 }
 
 async function removeMediaIfUnused(env, src) {
@@ -475,12 +489,13 @@ async function renderHome(req, env) {
   const page = await env.ASSETS.fetch(new Request(new URL('/', req.url), { headers: req.headers }));
   if (!page.ok) return page;
 
-  const [directors, photos, goals, news, settings] = await Promise.all([
+  const [directors, photos, goals, news, settings, amounts] = await Promise.all([
     env.DB.prepare('SELECT * FROM directors ORDER BY sort, id').all().then((r) => r.results),
     env.DB.prepare("SELECT * FROM photos WHERE placement != 'hidden' ORDER BY sort, id").all().then((r) => r.results),
     env.DB.prepare('SELECT * FROM goals ORDER BY sort, id').all().then((r) => r.results),
     env.DB.prepare('SELECT * FROM news WHERE published = 1 ORDER BY item_date DESC, id DESC LIMIT 12').all().then((r) => r.results),
     getSettings(env),
+    env.DB.prepare('SELECT * FROM donation_options ORDER BY sort, id').all().then((r) => r.results),
   ]);
 
   const hero = photos.find((p) => p.placement === 'hero');
@@ -517,6 +532,11 @@ async function renderHome(req, env) {
       }).join('; ') + '.'
     : '';
 
+  const pick = amounts.find((a) => a.is_default) || amounts[0];
+  const amountsHtml = amounts.map((a) =>
+    `<button type="button" data-v="${a.amount}" data-impact="${esc(esc(a.impact).replace(/\*(.+?)\*/g, '<strong>$1</strong>'))}" aria-pressed="${a === pick}">$${a.amount.toLocaleString('en-US')}</button>`
+  ).join('');
+
   const set = (value, fn) => ({ element(el) { if (value != null && value !== '') fn(el); } });
   const html = { html: true };
 
@@ -535,6 +555,11 @@ async function renderHome(req, env) {
         if (gallery.length) el.setInnerContent(galleryHtml, html); else { el.setInnerContent(''); el.setAttribute('hidden', ''); }
       },
     })
+    .on('[data-slot="amounts"]', set(amounts.length || null, (el) => {
+      el.setAttribute('class', `amounts n-${amounts.length}`);
+      el.setAttribute('style', `--n:${amounts.length}`);
+      el.setInnerContent(amountsHtml, html);
+    }))
     .on('[data-slot="board"]', { element(el) { el.setInnerContent(boardHtml, html); } })
     .on('[data-slot="goals"]', { element(el) { el.setInnerContent(goalsHtml, html); } })
     .on('[data-slot="goals-note"]', { element(el) { el.setInnerContent(goalsNote); } })

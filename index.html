@@ -168,7 +168,7 @@ section{padding-block:clamp(64px,9vw,112px)}
 .seg{display:flex;padding:4px;background:var(--salt);border-radius:999px;border:1px solid var(--line)}
 .seg button{flex:1;border:0;background:transparent;color:var(--muted);font:600 14px/1 var(--body);padding:11px;border-radius:999px;cursor:pointer}
 .seg button[aria-pressed="true"]{background:var(--ink);color:var(--salt)}
-.amounts{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+.amounts{display:grid;grid-template-columns:repeat(var(--n,5),1fr);gap:10px}
 .amounts button{border:1.5px solid var(--line);background:transparent;color:var(--ink);border-radius:12px;padding:14px 6px;font:700 18px/1 var(--display);cursor:pointer;font-variant-numeric:tabular-nums}
 .amounts button[aria-pressed="true"]{border-color:var(--river);background:color-mix(in srgb,var(--river) 12%,transparent)}
 .other{display:grid;gap:6px}
@@ -194,7 +194,12 @@ section{padding-block:clamp(64px,9vw,112px)}
 .zelle p{font-size:14px;color:var(--muted)}
 .donate .copy .badge{display:inline-flex;align-items:center;gap:8px;margin-top:22px;padding:8px 14px;border-radius:999px;font:500 12px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--band-fg);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--band-fg) 30%,transparent)}
 @media (max-width:820px){.donate{grid-template-columns:1fr}}
-@media (max-width:560px){.amounts{grid-template-columns:repeat(6,1fr)}.amounts button{grid-column:span 2}.amounts button:nth-child(n+4){grid-column:span 3}}
+@media (max-width:560px){
+  .amounts{grid-template-columns:repeat(3,1fr)}
+  .amounts.n-1{grid-template-columns:1fr}
+  .amounts.n-2,.amounts.n-4{grid-template-columns:repeat(2,1fr)}
+  .amounts.n-5{grid-template-columns:repeat(6,1fr)}.amounts.n-5 button{grid-column:span 2}.amounts.n-5 button:nth-child(n+4){grid-column:span 3}
+}
 
 
 /* Dashboard-driven content */
@@ -459,12 +464,12 @@ footer a:hover{color:var(--band-fg)}
           <button type="button" id="f-once" aria-pressed="true">One time</button>
           <button type="button" id="f-month" aria-pressed="false">Monthly</button>
         </div>
-        <div class="amounts" role="group" aria-label="Amount in US dollars" id="amounts">
-          <button type="button" data-v="25" aria-pressed="false">$25</button>
-          <button type="button" data-v="50" aria-pressed="true">$50</button>
-          <button type="button" data-v="100" aria-pressed="false">$100</button>
-          <button type="button" data-v="250" aria-pressed="false">$250</button>
-          <button type="button" data-v="1000" aria-pressed="false">$1,000</button>
+        <div class="amounts n-5" role="group" aria-label="Amount in US dollars" id="amounts" data-slot="amounts" style="--n:5">
+          <button type="button" data-v="25" data-impact="can buy &lt;strong&gt;exercise books and pens&lt;/strong&gt; for a pupil for a full term." aria-pressed="false">$25</button>
+          <button type="button" data-v="50" data-impact="can supply &lt;strong&gt;treated bed nets&lt;/strong&gt; for a family of five." aria-pressed="true">$50</button>
+          <button type="button" data-v="100" data-impact="can cover &lt;strong&gt;a term of books, uniform and exam fees&lt;/strong&gt; for a student." aria-pressed="false">$100</button>
+          <button type="button" data-v="250" data-impact="can fund &lt;strong&gt;a health outreach day&lt;/strong&gt; on one of the Volta islands." aria-pressed="false">$250</button>
+          <button type="button" data-v="1000" data-impact="can help &lt;strong&gt;repair a broken water point&lt;/strong&gt; so a whole community has clean water again." aria-pressed="false">$1,000</button>
         </div>
         <div class="other">
           <label for="other-amt">Or enter your own amount</label>
@@ -533,18 +538,15 @@ footer a:hover{color:var(--band-fg)}
 
 <script>
 (function(){
-  var impacts = {
-    25:'can buy <strong>exercise books and pens</strong> for a pupil for a full term.',
-    50:'can supply <strong>treated bed nets</strong> for a family of five.',
-    100:'can cover <strong>a term of books, uniform and exam fees</strong> for a student.',
-    250:'can fund <strong>a health outreach day</strong> on one of the Volta islands.',
-    1000:'can help <strong>repair a broken water point</strong> so a whole community has clean water again.'
-  };
-  var amount = 50, monthly = false;
+  // Amount buttons (and what each pays for) come from the dashboard.
+  var amountBtns = Array.prototype.slice.call(document.querySelectorAll('#amounts button'));
+  var tiers = amountBtns.map(function(b){ return { v: +b.dataset.v, impact: b.dataset.impact || '' }; })
+    .sort(function(a, b){ return b.v - a.v; });
+  var defaultBtn = document.querySelector('#amounts [aria-pressed="true"]') || amountBtns[0];
+  var amount = defaultBtn ? +defaultBtn.dataset.v : 0, monthly = false;
   var impactEl = document.getElementById('impact');
   function impactFor(v){
-    var tiers = [1000, 250, 100, 50, 25];
-    for (var i = 0; i < tiers.length; i++) if (v >= tiers[i]) return impacts[tiers[i]];
+    for (var i = 0; i < tiers.length; i++) if (v >= tiers[i].v && tiers[i].impact) return tiers[i].impact;
     return 'goes straight to <strong>school supplies, health outreach and clean water</strong> in Ada.';
   }
   function money(v){ return '$' + v.toLocaleString('en-US', {maximumFractionDigits: 2}); }
@@ -565,7 +567,7 @@ footer a:hover{color:var(--band-fg)}
   otherEl.addEventListener('input', function(){
     var v = parseFloat(otherEl.value);
     document.querySelectorAll('#amounts button').forEach(function(x){ x.setAttribute('aria-pressed', 'false'); });
-    if (otherEl.value === '') { amount = 50; document.querySelector('#amounts [data-v="50"]').setAttribute('aria-pressed', 'true'); }
+    if (otherEl.value === '') { amount = defaultBtn ? +defaultBtn.dataset.v : 0; if (defaultBtn) defaultBtn.setAttribute('aria-pressed', 'true'); }
     else amount = v > 0 ? Math.round(v * 100) / 100 : 0;
     render();
   });
