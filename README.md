@@ -41,3 +41,8 @@ npx wrangler deploy
 
 Database changes go in `migrations/` and are applied with `npx wrangler d1 migrations apply acif --remote`.
 `.assetsignore` keeps the code, database files and README from being published.
+
+## Old GitHub Pages address
+
+https://eoforidanso.github.io/adafoundation-/ redirects to https://adacommunityimpactfoundation.org.
+GitHub Pages serves the `gh-pages` branch, which holds only that redirect page; the site itself lives on `main`.
