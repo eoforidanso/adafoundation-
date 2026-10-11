@@ -14,7 +14,8 @@
   ],
   // Volunteer sign-up alerts (Cloudflare Email Sending).
   "send_email": [
-    { "name": "EMAIL" }
+    // Free plan: alerts may only go to addresses verified under Email Routing > Destination addresses.
+    { "name": "EMAIL", "allowed_destination_addresses": ["adacommunityimpact@gmail.com"] }
   ],
   "r2_buckets": [
     { "binding": "MEDIA", "bucket_name": "acif-photos" }

@@ -794,7 +794,7 @@ input[type="range"]{padding:0;border:0;accent-color:var(--river)}
         f('email', 'Email address', '', 'type="email" maxlength="160"') +
         f('city', 'City', 'Shown in the footer.', 'maxlength="80"') +
       '</div><h3 style="margin-top:24px">Email alerts</h3><div class="stack">' +
-        f('alert_email', 'Send volunteer sign-up alerts to', 'An email arrives here each time someone fills in the volunteer form. Separate more than one address with commas. Leave empty to turn alerts off.', 'maxlength="300" placeholder="AdaCommunityImpact@gmail.com"') +
+        f('alert_email', 'Send volunteer sign-up alerts to', 'An email arrives here each time someone fills in the volunteer form. Leave empty to turn alerts off. To use a different address, it must first be verified in Cloudflare (Email Routing, Destination addresses) and added to the website settings.', 'maxlength="300" placeholder="AdaCommunityImpact@gmail.com"') +
         '<div class="row"><button class="btn btn-ghost btn-sm" type="button" data-action="test-email">Send a test email</button><span class="hint">Save first, then send a test to check alerts arrive.</span></div>' +
       '</div><div class="row" style="margin-top:18px"><button class="btn btn-primary" type="submit">Save changes</button></div></form>' +
       '<div class="card"><h3>Changing the dashboard password</h3><p class="hint" style="font-size:14px">For security the password is stored with Cloudflare, not in this dashboard. To change it, open Terminal on the computer that manages the website and run:</p>' +
