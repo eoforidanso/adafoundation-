@@ -193,6 +193,17 @@ td .msgtext{max-width:42ch;white-space:pre-wrap;color:var(--muted)}
 .bar span{display:block;height:100%;width:0;background:var(--river);transition:width .2s ease}
 @media (max-width:720px){.video-item{grid-template-columns:1fr}.video-thumb{width:100%}}
 
+/* Projects */
+.project-item{grid-template-columns:auto 1fr auto}
+.project-item .cover{width:96px;aspect-ratio:4/3;border-radius:10px;overflow:hidden;background:var(--line);flex:none}
+.project-item .cover img{width:100%;height:100%;object-fit:cover;display:block}
+.extras{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+.extra{display:grid;gap:6px;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:8px}
+.extra img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:8px;display:block}
+.extra input{font-size:13px;padding:6px 8px}
+.extra .row{justify-content:space-between}
+@media (max-width:720px){.project-item{grid-template-columns:1fr}.project-item .cover{width:100%}}
+
 /* Framing editor */
 .frame-card{width:min(860px,100%)}
 .frame-layout{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:20px;align-items:start}
@@ -273,6 +284,7 @@ input[type="range"]{padding:0;border:0;accent-color:var(--river)}
     ['board', 'Board'],
     ['goals', 'Goals'],
     ['amounts', 'Donate amounts'],
+    ['projects', 'Projects'],
     ['news', 'News & events'],
     ['volunteers', 'Volunteers'],
     ['donations', 'Donations & receipts'],
@@ -283,6 +295,8 @@ input[type="range"]{padding:0;border:0;accent-color:var(--river)}
   var tab = 'overview';
   var volFilter = 'new';
   var editingNews = null;
+  var editingProject = null;
+  var PROJECT_CATEGORIES = ['Education', 'Community health', 'Clean water', 'Livelihoods', 'Women & girls', 'Youth', 'Infrastructure', 'Coast & mangroves', 'Culture & heritage', 'Other'];
 
   var $ = function(s, el){ return (el || document).querySelector(s); };
   function esc(v){ return String(v == null ? '' : v).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
@@ -678,6 +692,90 @@ input[type="range"]{padding:0;border:0;accent-color:var(--river)}
       '<div class="list">' + (rows || '<div class="card empty">No amounts yet. Donors will only see the box for typing their own amount.</div>') + '</div>';
   };
 
+  VIEWS.projects = function(){
+    var p = editingProject ? state.projects.find(function(x){ return x.id === editingProject; }) : null;
+    var extras = p ? state.project_photos.filter(function(x){ return x.project_id === p.id; }) : [];
+    var v = function(k, d){ return esc(p ? p[k] : (d || '')); };
+    var items = state.projects.map(function(pr, i){
+      var n = state.project_photos.filter(function(x){ return x.project_id === pr.id; }).length;
+      return '<div class="item project-item">' +
+        '<div class="cover">' + (pr.cover ? '<img src="' + esc(pr.cover) + '" alt="" style="' + rowFrame(pr) + '">' : '') + '</div>' +
+        '<div style="min-width:0"><strong>' + esc(pr.title) + '</strong>' +
+          '<div class="hint">' + esc(pr.category) + (pr.location ? ' · ' + esc(pr.location) : '') + (pr.completed_on ? ' · ' + esc(prettyDate(pr.completed_on)) : '') +
+          ' · ' + (pr.published ? '<span class="pill pill-ok">On the website</span>' : '<span class="pill pill-muted">Hidden</span>') + '</div>' +
+          (pr.impact ? '<div style="color:var(--river);font-weight:600;margin-top:4px">' + esc(pr.impact) + '</div>' : '') +
+          '<div class="hint">' + (n ? n + (n === 1 ? ' extra photo' : ' extra photos') : 'No extra photos') + '</div></div>' +
+        '<div class="item-actions">' + moveButtons('projects', pr.id, i, state.projects.length) +
+          '<button class="btn btn-ghost btn-sm" type="button" data-action="project-toggle" data-id="' + pr.id + '">' + (pr.published ? 'Hide' : 'Show') + '</button>' +
+          '<button class="btn btn-ghost btn-sm" type="button" data-action="project-edit" data-id="' + pr.id + '">Edit</button>' +
+          '<button class="btn btn-danger btn-sm" type="button" data-action="delete" data-table="projects" data-id="' + pr.id + '" data-label="the project &quot;' + esc(pr.title) + '&quot; and its photos">Delete</button>' +
+        '</div></div>';
+    }).join('');
+    var extrasHtml = p ? '<div class="field"><label>Extra photos</label>' +
+        (extras.length ? '<div class="extras">' + extras.map(function(x, i){
+          return '<div class="extra"><img src="' + esc(x.src) + '" alt=""><input value="' + esc(x.caption) + '" maxlength="120" placeholder="Caption (optional)" aria-label="Caption" data-save="project_photos:' + x.id + ':caption">' +
+            '<div class="row"><div class="row" style="gap:4px">' + moveButtons('project_photos', x.id, i, extras.length) + '</div>' +
+            '<button class="linkish" style="color:var(--bad)" type="button" data-action="delete" data-table="project_photos" data-id="' + x.id + '" data-label="this photo">Remove</button></div></div>';
+        }).join('') + '</div>' : '<p class="hint">No extra photos yet.</p>') +
+        '<label class="btn btn-ghost btn-sm" style="justify-self:start;margin-top:8px;cursor:pointer">Add photos<input type="file" accept="image/*" multiple id="pj-extra-add" style="position:absolute;width:1px;height:1px;opacity:0"></label>' +
+        '<span class="progress" id="pj-extra-progress"></span></div>'
+      : '<div class="field"><label for="pj-extras">Extra photos (optional)</label><input id="pj-extras" type="file" accept="image/*" multiple><span class="hint">Shown when visitors open the full story. You can add more later.</span></div>';
+    return head('Completed projects', 'Projects you have finished in Ada. Each appears as a card in the Completed projects section of the website; visitors can open the full story and photos.') +
+      '<form class="card" id="project-form"><h3>' + (p ? 'Edit project' : 'Add a completed project') + '</h3><div class="stack">' +
+        '<div class="grid2"><div class="field"><label for="pj-title">Project name</label><input id="pj-title" maxlength="120" required value="' + v('title') + '" placeholder="e.g. New classroom block at Big Ada Primary"></div>' +
+        '<div class="field"><label for="pj-cat">Category</label><select id="pj-cat">' + PROJECT_CATEGORIES.map(function(c){ return '<option' + ((p ? p.category : 'Education') === c ? ' selected' : '') + '>' + esc(c) + '</option>'; }).join('') + '</select></div></div>' +
+        '<div class="grid2"><div class="field"><label for="pj-loc">Where</label><input id="pj-loc" maxlength="80" value="' + v('location') + '" placeholder="e.g. Big Ada, Ada Foah, Kasseh"></div>' +
+        '<div class="field"><label for="pj-date">Date completed</label><input id="pj-date" type="date" value="' + v('completed_on') + '"></div></div>' +
+        '<div class="field"><label for="pj-impact">Headline result</label><input id="pj-impact" maxlength="80" value="' + v('impact') + '" placeholder="e.g. 320 students received new books"><span class="hint">Shown in teal on the card. Keep it short.</span></div>' +
+        '<div class="field"><label for="pj-summary">Short summary</label><textarea id="pj-summary" rows="2" maxlength="300" placeholder="One or two sentences shown on the card.">' + v('summary') + '</textarea></div>' +
+        '<div class="field"><label for="pj-body">Full story (optional)</label><textarea id="pj-body" rows="6" maxlength="5000" placeholder="What you did, who it helped, and who made it possible. Leave a blank line between paragraphs.">' + v('body') + '</textarea></div>' +
+        '<div class="grid2"><div class="field"><label for="pj-cover">Cover photo' + (p && p.cover ? ' (choose a file to replace it)' : '') + '</label><input id="pj-cover" type="file" accept="image/*">' +
+          (p && p.cover ? '<div class="row" style="margin-top:6px"><button class="btn btn-ghost btn-sm" type="button" data-action="frame-open" data-table="projects" data-id="' + p.id + '">Adjust cover framing</button><label class="row hint" style="font-weight:500"><input type="checkbox" id="pj-cover-remove"> Remove cover</label></div>' : '') + '</div>' +
+        '<label class="row" style="align-self:end;color:var(--ink);font-size:15px;font-weight:500"><input type="checkbox" id="pj-pub"' + (!p || p.published ? ' checked' : '') + '> Show on the website</label></div>' +
+        extrasHtml +
+        '<div class="row"><button class="btn btn-primary" type="submit">' + (p ? 'Save changes' : 'Add project') + '</button>' + (p ? '<button class="btn btn-ghost" type="button" data-action="project-cancel">Done editing</button>' : '') + '</div>' +
+      '</div></form>' +
+      '<div class="list" style="margin-top:16px">' + (items || '<div class="card empty">No projects yet. The Completed projects section appears on the website once you add one.</div>') + '</div>';
+  };
+  AFTER.projects = function(){
+    function addExtras(projectId, files, progressEl){
+      files = Array.prototype.slice.call(files || []).filter(function(f){ return /^image\//.test(f.type); });
+      var done = 0;
+      return files.reduce(function(chain, f){
+        return chain.then(function(){
+          if (progressEl) progressEl.textContent = 'Uploading photo ' + (done + 1) + ' of ' + files.length + '...';
+          return uploadImage(f, 1800).then(function(src){ return call('POST', '/api/admin/project_photos', { project_id: projectId, src: src, caption: '' }); })
+            .then(function(){ done++; }).catch(fail);
+        });
+      }, Promise.resolve()).then(function(){ if (progressEl) progressEl.textContent = ''; return done; });
+    }
+    $('#project-form').addEventListener('submit', function(e){
+      e.preventDefault();
+      var btn = e.target.querySelector('button[type="submit"]'); btn.disabled = true; btn.textContent = 'Saving...';
+      var coverFile = $('#pj-cover').files[0];
+      var removeCover = $('#pj-cover-remove') && $('#pj-cover-remove').checked;
+      var extraFiles = $('#pj-extras') ? $('#pj-extras').files : null;
+      (coverFile ? uploadImage(coverFile, 1800) : Promise.resolve(null)).then(function(cover){
+        var body = { title: $('#pj-title').value, category: $('#pj-cat').value, location: $('#pj-loc').value, completed_on: $('#pj-date').value,
+          impact: $('#pj-impact').value, summary: $('#pj-summary').value, body: $('#pj-body').value, published: $('#pj-pub').checked };
+        if (cover) { body.cover = cover; body.focus_x = 50; body.focus_y = 50; body.zoom = 100; }
+        else if (removeCover) body.cover = '';
+        return editingProject ? call('PUT', '/api/admin/projects/' + editingProject, body) : call('POST', '/api/admin/projects', body);
+      }).then(function(row){
+        var wasNew = !editingProject;
+        return addExtras(row.id, extraFiles, null).then(function(){
+          toast(wasNew ? 'Project added to the website' : 'Project saved');
+          if (wasNew) editingProject = null;
+          return refresh();
+        });
+      }).catch(fail).then(function(){ btn.disabled = false; btn.textContent = editingProject ? 'Save changes' : 'Add project'; });
+    });
+    var add = $('#pj-extra-add');
+    if (add) add.addEventListener('change', function(){
+      addExtras(editingProject, add.files, $('#pj-extra-progress')).then(function(n){ if (n) toast(n + (n === 1 ? ' photo' : ' photos') + ' added'); return refresh(); });
+    });
+  };
+
   VIEWS.news = function(){
     var n = editingNews;
     var items = state.news.map(function(p){
@@ -817,13 +915,17 @@ input[type="range"]{padding:0;border:0;accent-color:var(--river)}
       call('DELETE', '/api/admin/' + el.dataset.table + '/' + el.dataset.id).then(function(){ toast('Deleted'); return refresh(); }).catch(fail);
     },
     move: function(el){
-      var list = state[el.dataset.table].slice();
-      var i = list.findIndex(function(r){ return String(r.id) === el.dataset.id; });
-      var j = i + Number(el.dataset.dir);
+      var t = el.dataset.table, all = state[t];
+      var row = all.find(function(r){ return String(r.id) === el.dataset.id; });
+      // A project's extra photos are reordered among themselves, not across projects.
+      var grouped = t === 'project_photos';
+      var list = grouped ? all.filter(function(r){ return r.project_id === row.project_id; }) : all.slice();
+      var i = list.indexOf(row), j = i + Number(el.dataset.dir);
       if (j < 0 || j >= list.length) return;
       var tmp = list[i]; list[i] = list[j]; list[j] = tmp;
-      state[el.dataset.table] = list; render();
-      call('PUT', '/api/admin/' + el.dataset.table + '/order', { ids: list.map(function(r){ return r.id; }) }).catch(function(err){ fail(err); refresh(); });
+      state[t] = grouped ? all.filter(function(r){ return r.project_id !== row.project_id; }).concat(list) : list;
+      render();
+      call('PUT', '/api/admin/' + t + '/order', { ids: list.map(function(r){ return r.id; }) }).catch(function(err){ fail(err); refresh(); });
     },
     'director-photo': function(el){
       pickFile(function(file){
@@ -853,6 +955,12 @@ input[type="range"]{padding:0;border:0;accent-color:var(--river)}
     },
     'video-cover-remove': function(el){
       call('PUT', '/api/admin/videos/' + el.dataset.id, { poster: '' }).then(function(){ toast('Cover image removed'); return refresh(); }).catch(fail);
+    },
+    'project-edit': function(el){ editingProject = Number(el.dataset.id); render(); window.scrollTo(0, 0); },
+    'project-cancel': function(){ editingProject = null; render(); },
+    'project-toggle': function(el){
+      var pr = state.projects.find(function(x){ return String(x.id) === el.dataset.id; });
+      call('PUT', '/api/admin/projects/' + pr.id, { published: !pr.published }).then(function(){ toast(pr.published ? 'Project hidden from the website' : 'Project shown on the website'); return refresh(); }).catch(fail);
     },
     'add-goal': function(){
       call('POST', '/api/admin/goals', { value: '0', label: 'New goal', kind: 'target' }).then(function(){ toast('Added. Type the number and what it counts.'); return refresh(); }).catch(fail);
@@ -889,7 +997,7 @@ input[type="range"]{padding:0;border:0;accent-color:var(--river)}
     'frame-reset': function(){ frame.x = 50; frame.y = 50; frame.z = 100; renderFrame(); },
     'frame-rotate': function(el){
       frame.busy = true; renderFrame();
-      var field = frame.table === 'photos' ? 'src' : 'photo';
+      var field = frame.table === 'photos' ? 'src' : frame.table === 'projects' ? 'cover' : 'photo';
       rotatedBlob(frame.src, Number(el.dataset.deg)).then(function(blob){
         if (blob.size > 8 * 1024 * 1024) return shrink(new File([blob], 'rotated.jpg', { type: 'image/jpeg' }), 2200);
         return blob;
@@ -924,15 +1032,16 @@ input[type="range"]{padding:0;border:0;accent-color:var(--river)}
 
   var frame = null;
   var SHAPES = { wide: 'Banner on a computer', tall: 'Banner on a phone', '4x3': 'Photo row', circle: 'Board photo' };
+  function shapeLabel(s){ return frame && frame.table === 'projects' ? 'Project card' : SHAPES[s]; }
   function clamp(v){ return Math.max(0, Math.min(100, v)); }
-  function frameShapes(){ return frame.table === 'directors' ? ['circle'] : ['wide', 'tall', '4x3']; }
+  function frameShapes(){ return frame.table === 'directors' ? ['circle'] : frame.table === 'projects' ? ['4x3'] : ['wide', 'tall', '4x3']; }
   function frameRow(){ return state[frame.table].find(function(r){ return r.id === frame.id; }); }
 
   function openFrame(table, id){
     var row = state[table].find(function(r){ return r.id === id; });
     if (!row) return;
     frame = {
-      table: table, id: id, src: table === 'photos' ? row.src : row.photo,
+      table: table, id: id, src: table === 'photos' ? row.src : table === 'projects' ? row.cover : row.photo,
       x: row.focus_x == null ? 50 : row.focus_x, y: row.focus_y == null ? 50 : row.focus_y, z: row.zoom == null ? 100 : row.zoom,
       shape: table === 'directors' ? 'circle' : (row.placement === 'hero' ? 'wide' : '4x3'), busy: false
     };
@@ -945,11 +1054,11 @@ input[type="range"]{padding:0;border:0;accent-color:var(--river)}
     var m = $('#frame-modal');
     m.innerHTML = '<div class="modal-card frame-card" role="dialog" aria-modal="true" aria-label="Adjust photo framing">' +
       '<div class="row" style="justify-content:space-between"><h3 style="margin:0;font-size:20px">Adjust framing</h3>' +
-        (shapes.length > 1 ? '<div class="chips">' + shapes.map(function(s){ return '<button class="chip" type="button" data-action="frame-shape" data-shape="' + s + '" aria-pressed="' + (s === frame.shape) + '">' + SHAPES[s] + '</button>'; }).join('') + '</div>' : '') +
+        (shapes.length > 1 ? '<div class="chips">' + shapes.map(function(s){ return '<button class="chip" type="button" data-action="frame-shape" data-shape="' + s + '" aria-pressed="' + (s === frame.shape) + '">' + shapeLabel(s) + '</button>'; }).join('') + '</div>' : '') +
       '</div>' +
       '<div class="frame-layout"><div><div class="stage shape-' + frame.shape + '" id="frame-stage" tabindex="0" role="img" aria-label="Photo preview. Drag, or use the arrow keys, to move the photo.">' + img + '</div>' +
         '<p class="hint" style="margin-top:8px">Drag the photo to choose what stays in view. Arrow keys work too.</p></div>' +
-        (others.length ? '<div class="previews">' + others.map(function(s){ return '<div class="preview"><div class="stage shape-' + s + '">' + img + '</div><span>' + SHAPES[s] + '</span></div>'; }).join('') + '</div>' : '') +
+        (others.length ? '<div class="previews">' + others.map(function(s){ return '<div class="preview"><div class="stage shape-' + s + '">' + img + '</div><span>' + shapeLabel(s) + '</span></div>'; }).join('') + '</div>' : '') +
       '</div>' +
       '<div class="field"><label for="frame-zoom">Zoom</label><input type="range" id="frame-zoom" min="100" max="300" step="1" value="' + frame.z + '"></div>' +
       '<div class="row" style="justify-content:space-between"><div class="row">' +

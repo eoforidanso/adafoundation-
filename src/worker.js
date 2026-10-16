@@ -14,6 +14,8 @@ const DEFAULT_HERO = '/images/hero-canoes.jpg';
 const ALERT_FROM = { email: 'alerts@adacommunityimpactfoundation.org', name: 'ACIF Website' };
 const SITE_URL = 'https://adacommunityimpactfoundation.org';
 
+const PROJECT_CATEGORIES = ['Education', 'Community health', 'Clean water', 'Livelihoods', 'Women & girls', 'Youth', 'Infrastructure', 'Coast & mangroves', 'Culture & heritage', 'Other'];
+
 // Field rules for each table the dashboard can edit.
 const TABLES = {
   directors: {
@@ -33,6 +35,19 @@ const TABLES = {
   goals: {
     order: 'sort, id', sortable: true,
     fields: { value: { max: 12, required: true }, label: { max: 80, required: true }, kind: { oneOf: ['target', 'achieved'] }, sort: { int: true } },
+  },
+  projects: {
+    order: 'sort, id', sortable: true,
+    fields: {
+      title: { max: 120, required: true }, location: { max: 80 }, completed_on: { date: true },
+      category: { oneOf: PROJECT_CATEGORIES }, impact: { max: 80 }, summary: { max: 300 }, body: { max: 5000 },
+      cover: { src: true }, published: { bool: true }, sort: { int: true },
+      focus_x: { int: true, min: 0, max: 100 }, focus_y: { int: true, min: 0, max: 100 }, zoom: { int: true, min: 100, max: 300 },
+    },
+  },
+  project_photos: {
+    order: 'project_id, sort, id', sortable: true,
+    fields: { project_id: { int: true, min: 1, required: true, createOnly: true }, src: { src: true, required: true, createOnly: true }, caption: { max: 120 }, sort: { int: true } },
   },
   videos: {
     order: 'sort, id', sortable: true,
@@ -365,6 +380,10 @@ async function createRow(req, env, name, table) {
   if (!body) return json({ error: 'Nothing to save.' }, 400);
   const { values, error } = validate(table.fields, body, false);
   if (error) return json({ error }, 400);
+  if (name === 'project_photos') {
+    const parent = await env.DB.prepare('SELECT id FROM projects WHERE id = ?').bind(values.project_id).first();
+    if (!parent) return json({ error: 'That project no longer exists.' }, 404);
+  }
   if (table.check) {
     const problem = table.check(values);
     if (problem) return json({ error: problem }, 400);
@@ -399,7 +418,7 @@ async function updateRow(req, env, name, table, id) {
     .bind(...cols.map((c) => values[c]), id).first();
   if (name === 'photos' && row.placement === 'hero') await onlyOneHero(env, id);
   if (name === 'donation_options' && row.is_default) await onlyOneDefault(env, id);
-  for (const field of ['photo', 'src', 'ref', 'poster']) {
+  for (const field of ['photo', 'src', 'ref', 'poster', 'cover']) {
     if (before[field] && before[field] !== row[field]) await removeMediaIfUnused(env, before[field]);
   }
   return json(row);
@@ -409,7 +428,12 @@ async function deleteRow(env, name, id) {
   const before = await env.DB.prepare(`SELECT * FROM ${name} WHERE id = ?`).bind(id).first();
   if (!before) return json({ ok: true });
   await env.DB.prepare(`DELETE FROM ${name} WHERE id = ?`).bind(id).run();
-  for (const field of ['photo', 'src', 'ref', 'poster']) if (before[field]) await removeMediaIfUnused(env, before[field]);
+  for (const field of ['photo', 'src', 'ref', 'poster', 'cover']) if (before[field]) await removeMediaIfUnused(env, before[field]);
+  if (name === 'projects') {
+    const extras = (await env.DB.prepare('SELECT src FROM project_photos WHERE project_id = ?').bind(id).all()).results;
+    await env.DB.prepare('DELETE FROM project_photos WHERE project_id = ?').bind(id).run();
+    for (const x of extras) await removeMediaIfUnused(env, x.src);
+  }
   return json({ ok: true });
 }
 
@@ -433,7 +457,8 @@ async function removeMediaIfUnused(env, src) {
   if (!src.startsWith('/media/')) return;
   const used = await env.DB.prepare(
     'SELECT (SELECT COUNT(*) FROM directors WHERE photo = ?1) + (SELECT COUNT(*) FROM photos WHERE src = ?1) + (SELECT COUNT(*) FROM news WHERE photo = ?1)' +
-    ' + (SELECT COUNT(*) FROM videos WHERE ref = ?1 OR poster = ?1) AS n'
+    ' + (SELECT COUNT(*) FROM videos WHERE ref = ?1 OR poster = ?1)' +
+    ' + (SELECT COUNT(*) FROM projects WHERE cover = ?1) + (SELECT COUNT(*) FROM project_photos WHERE src = ?1) AS n'
   ).bind(src).first();
   if (used.n === 0) await env.MEDIA.delete(src.slice(7));
 }
@@ -518,6 +543,12 @@ function paragraphs(text) {
   return text.split(/\n\s*\n/).map((p) => `<p>${esc(p.trim()).replace(/\n/g, '<br>')}</p>`).join('');
 }
 
+function monthYear(iso) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso || '')) return '';
+  const [y, m] = iso.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+}
+
 function prettyDate(iso) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(iso || '')) return '';
   const [y, m, d] = iso.split('-').map(Number);
@@ -528,7 +559,7 @@ async function renderHome(req, env) {
   const page = await env.ASSETS.fetch(new Request(new URL('/', req.url), { headers: req.headers }));
   if (!page.ok) return page;
 
-  const [directors, photos, goals, news, settings, amounts, videos] = await Promise.all([
+  const [directors, photos, goals, news, settings, amounts, videos, projects, projectPhotos] = await Promise.all([
     env.DB.prepare('SELECT * FROM directors ORDER BY sort, id').all().then((r) => r.results),
     env.DB.prepare("SELECT * FROM photos WHERE placement != 'hidden' ORDER BY sort, id").all().then((r) => r.results),
     env.DB.prepare('SELECT * FROM goals ORDER BY sort, id').all().then((r) => r.results),
@@ -536,6 +567,8 @@ async function renderHome(req, env) {
     getSettings(env),
     env.DB.prepare('SELECT * FROM donation_options ORDER BY sort, id').all().then((r) => r.results),
     env.DB.prepare('SELECT * FROM videos WHERE published = 1 ORDER BY sort, id').all().then((r) => r.results),
+    env.DB.prepare('SELECT * FROM projects WHERE published = 1 ORDER BY sort, id').all().then((r) => r.results),
+    env.DB.prepare('SELECT pp.* FROM project_photos pp JOIN projects p ON p.id = pp.project_id WHERE p.published = 1 ORDER BY pp.sort, pp.id').all().then((r) => r.results),
   ]);
 
   const hero = photos.find((p) => p.placement === 'hero');
@@ -577,6 +610,20 @@ async function renderHome(req, env) {
     `<button type="button" data-v="${a.amount}" data-impact="${esc(esc(a.impact).replace(/\*(.+?)\*/g, '<strong>$1</strong>'))}" aria-pressed="${a === pick}">$${a.amount.toLocaleString('en-US')}</button>`
   ).join('');
 
+  const projectsHtml = projects.map((pr) => {
+    const extras = projectPhotos.filter((x) => x.project_id === pr.id);
+    const meta = [pr.location, monthYear(pr.completed_on)].filter(Boolean).map(esc).join(' &middot; ');
+    const strip = extras.length ? '<div class="project-photos">' + extras.map((x) =>
+      `<figure><a href="${esc(x.src)}" target="_blank" rel="noopener"><img src="${esc(x.src)}" alt="${esc(x.caption)}" loading="lazy"></a>${x.caption ? `<figcaption>${esc(x.caption)}</figcaption>` : ''}</figure>`
+    ).join('') + '</div>' : '';
+    const more = pr.body || extras.length
+      ? `<details class="project-more"><summary>Read the full story</summary>${paragraphs(pr.body || '')}${strip}</details>` : '';
+    return `<article class="project">` +
+      (pr.cover ? `<div class="project-cover"><img src="${esc(pr.cover)}" alt="" loading="lazy" style="${framing(pr)}"></div>` : '') +
+      `<div class="project-body"><div class="project-meta"><span class="project-cat">${esc(pr.category)}</span>${meta ? `<span>${meta}</span>` : ''}</div>` +
+      `<h3>${esc(pr.title)}</h3>${pr.impact ? `<p class="project-impact">${esc(pr.impact)}</p>` : ''}${pr.summary ? `<p>${esc(pr.summary)}</p>` : ''}${more}</div></article>`;
+  }).join('');
+
   const videosHtml = videos.map((v) => {
     let player;
     if (v.kind === 'file') {
@@ -614,6 +661,9 @@ async function renderHome(req, env) {
       el.setAttribute('style', `--n:${amounts.length}`);
       el.setInnerContent(amountsHtml, html);
     }))
+    .on('[data-slot="projects"]', set(projects.length || null, (el) => el.removeAttribute('hidden')))
+    .on('[data-slot="nav-projects"]', set(projects.length || null, (el) => el.removeAttribute('hidden')))
+    .on('[data-slot="projects-list"]', { element(el) { el.setInnerContent(projectsHtml, html); } })
     .on('[data-slot="videos"]', set(videos.length || null, (el) => el.removeAttribute('hidden')))
     .on('[data-slot="nav-videos"]', set(videos.length || null, (el) => el.removeAttribute('hidden')))
     .on('[data-slot="videos-list"]', { element(el) { el.setInnerContent(videosHtml, html); } })

@@ -75,8 +75,9 @@ header.nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:10;backgroun
 .btn:hover{transform:translateY(-1px)}
 .btn-primary{background:var(--river);color:var(--river-ink)}
 .btn-ghost{background:transparent;color:inherit;box-shadow:inset 0 0 0 1.5px currentColor}
-@media (max-width:1180px){.nav ul{gap:16px;font-size:14px}}
-@media (max-width:980px){.nav ul{display:none}}
+.nav ul a{white-space:nowrap}
+@media (max-width:1400px){.nav ul{gap:16px;font-size:14px}}
+@media (max-width:1240px){.nav ul{display:none}}
 
 /* Hero: full-bleed photo of canoes on the Volta estuary */
 .hero{position:relative;overflow:hidden;color:#fff;background:#0C2A30;min-height:min(92vh,820px);display:flex;flex-direction:column;justify-content:flex-end;padding-block:clamp(112px,14vw,180px) 0}
@@ -220,6 +221,28 @@ section{padding-block:clamp(64px,9vw,112px)}
 .avatar-photo img{width:100%;height:100%;object-fit:cover;display:block}
 .hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
 
+/* Completed projects */
+.projects{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,340px),1fr));gap:20px;align-items:start}
+.project{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;display:flex;flex-direction:column;min-width:0}
+.project-cover{position:relative;aspect-ratio:4/3;max-width:100%;overflow:hidden;background:var(--sand)}
+.project-cover img{width:100%;height:100%;object-fit:cover;display:block}
+.project-body{padding:20px 22px 22px;display:grid;gap:10px}
+.project-meta{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;font:500 12px/1.4 var(--mono);color:var(--muted)}
+.project-cat{padding:5px 9px;border-radius:999px;letter-spacing:.06em;text-transform:uppercase;color:var(--river);background:color-mix(in srgb,var(--river) 12%,transparent)}
+.project-body h3{font-size:22px;font-weight:700}
+.project-impact{font:700 17px/1.35 var(--display);color:var(--river)}
+.project-body > p{color:var(--muted);font-size:16px}
+.project-more{border-top:1px dashed var(--line);padding-top:12px;margin-top:4px}
+.project-more summary{cursor:pointer;font-weight:600;color:var(--river);list-style:none;display:inline-flex;align-items:center;gap:6px}
+.project-more summary::-webkit-details-marker{display:none}
+.project-more summary::after{content:"+";font:700 18px/1 var(--display);transition:transform .2s ease}
+.project-more[open] summary::after{transform:rotate(45deg)}
+.project-more p{color:var(--muted);font-size:16px;margin-top:12px}
+.project-photos{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;margin-top:14px}
+.project-photos figure{margin:0;display:grid;gap:4px;min-width:0}
+.project-photos img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;display:block}
+.project-photos figcaption{font-size:12px;color:var(--muted);line-height:1.35}
+
 /* Who we are */
 .who-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.6fr);gap:clamp(28px,5vw,72px);align-items:start}
 .who-side{position:sticky;top:calc(env(safe-area-inset-top,0px) + 96px);display:grid;gap:22px}
@@ -326,6 +349,7 @@ footer a:hover{color:var(--band-fg)}
       <li><a href="#who-we-are">Who we are</a></li>
       <li data-slot="nav-videos" hidden><a href="#videos">Videos</a></li>
       <li><a href="#programs">Our work</a></li>
+      <li data-slot="nav-projects" hidden><a href="#projects">Projects</a></li>
       <li><a href="#goals">Goals</a></li>
       <li data-slot="nav-news" hidden><a href="#news">News</a></li>
       <li><a href="#board">Board</a></li>
@@ -474,6 +498,19 @@ footer a:hover{color:var(--band-fg)}
           <ul><li>Mangrove nurseries</li><li>Beach clean-ups</li></ul>
         </article>
       </div>
+    </div>
+  </section>
+
+  <section id="projects" data-slot="projects" hidden>
+    <div class="wrap">
+      <div class="sec-head">
+        <div>
+          <p class="eyebrow">Completed projects</p>
+          <h2>What we have <span class="hl">done together</span></h2>
+        </div>
+        <p>Projects finished with the people of Ada, made possible by our donors, partners and volunteers.</p>
+      </div>
+      <div class="projects" data-slot="projects-list"></div>
     </div>
   </section>
 
