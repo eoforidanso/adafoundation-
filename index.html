@@ -190,7 +190,13 @@ section{padding-block:clamp(64px,9vw,112px)}
 :root[data-theme="dark"] .zelle-head b{color:#B98BFF}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .zelle-head b{color:#B98BFF}}
 .zelle-num{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.zelle-num span{font:700 22px/1 var(--display);letter-spacing:.01em;font-variant-numeric:tabular-nums;user-select:all}
+.zelle-num span{font:700 clamp(17px,2vw,20px)/1.2 var(--display);letter-spacing:.01em;font-variant-numeric:tabular-nums;user-select:all;overflow-wrap:anywhere;min-width:0}
+.zelle-main{display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.zelle-info{display:grid;gap:6px;min-width:0;flex:1 1 220px}
+.zelle-label{font:500 11px/1.3 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.zelle-qr{margin:0;display:grid;gap:6px;justify-items:center;flex:none}
+.zelle-qr img{width:132px;height:132px;background:#fff;padding:6px;border-radius:10px;border:1px solid var(--line);image-rendering:pixelated}
+.zelle-qr figcaption{font-size:11px;color:var(--muted);max-width:140px;text-align:center;line-height:1.3}
 .copy-btn{border:1.5px solid var(--line);background:transparent;color:var(--ink);font:600 13px/1 var(--body);padding:8px 12px;border-radius:999px;cursor:pointer}
 .copy-btn:hover{border-color:var(--river)}
 .zelle p{font-size:14px;color:var(--muted)}
@@ -601,8 +607,18 @@ footer a:hover{color:var(--band-fg)}
         <p class="impact" id="impact" aria-live="polite"></p>
         <div class="zelle">
           <div class="zelle-head"><b>Give with Zelle</b><span class="taxnote" style="text-align:right">No fees, straight from your bank app</span></div>
-          <div class="zelle-num"><span id="zelle-number" data-slot="zelle">773-329-3016</span><button class="copy-btn" type="button" id="zelle-copy">Copy number</button></div>
-          <p>Send <strong id="zelle-amt">$50</strong> to this number in your bank's Zelle app.<span id="zelle-monthly" hidden> Most bank apps let you set a Zelle payment to repeat every month.</span> For a tax receipt, email <strong data-slot="email-text">AdaCommunityImpact@gmail.com</strong> with your name, the date and the amount.</p>
+          <div class="zelle-main">
+            <div class="zelle-info">
+              <span class="zelle-label">Send to</span>
+              <div class="zelle-num"><span id="zelle-number" data-slot="zelle">AdaCommunityImpact@gmail.com</span><button class="copy-btn" type="button" id="zelle-copy">Copy</button></div>
+              <span class="zelle-label">Shows as: Ada Community Impact Foundation</span>
+            </div>
+            <figure class="zelle-qr" data-slot="zelle-qr">
+              <img data-slot="zelle-qr-img" src="images/zelle-qr.png" alt="Zelle QR code for Ada Community Impact Foundation" width="132" height="132" loading="lazy">
+              <figcaption>Scan with your phone camera or bank app</figcaption>
+            </figure>
+          </div>
+          <p>Send <strong id="zelle-amt">$50</strong> with Zelle using the details above, or scan the code.<span id="zelle-monthly" hidden> Most bank apps let you set a Zelle payment to repeat every month.</span> For a tax receipt, email <strong data-slot="email-text">AdaCommunityImpact@gmail.com</strong> with your name, the date and the amount.</p>
         </div>
       </div>
     </div>
@@ -700,7 +716,7 @@ footer a:hover{color:var(--band-fg)}
   var zc = document.getElementById('zelle-copy');
   zc.addEventListener('click', function(){
     var num = document.getElementById('zelle-number');
-    function done(){ zc.textContent = 'Copied'; setTimeout(function(){ zc.textContent = 'Copy number'; }, 1800); }
+    function done(){ zc.textContent = 'Copied'; setTimeout(function(){ zc.textContent = 'Copy'; }, 1800); }
     function fallback(){ var r = document.createRange(); r.selectNodeContents(num); var sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); zc.textContent = 'Selected, press copy'; }
     try { navigator.clipboard.writeText(num.textContent).then(done, fallback); } catch (e) { fallback(); }
   });

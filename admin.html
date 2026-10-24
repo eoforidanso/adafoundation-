@@ -888,7 +888,12 @@ input[type="range"]{padding:0;border:0;accent-color:var(--river)}
         '<div class="field"><label for="s-lede">Introduction</label><textarea id="s-lede" rows="4" maxlength="600">' + esc(s.lede) + '</textarea></div>' +
       '</div><h3 style="margin-top:24px">Contact & giving</h3><div class="grid2">' +
         f('phone', 'Phone number', '', 'maxlength="40"') +
-        f('zelle', 'Zelle number or email', 'Shown in the Donate section.', 'maxlength="40"') +
+        f('zelle', 'Zelle email or phone', 'Shown in the Donate section.', 'maxlength="160"') +
+        '<div class="field"><label>Zelle QR code</label><div class="row" style="align-items:center">' +
+          (s.zelle_qr ? '<img src="' + esc(s.zelle_qr) + '" alt="Current Zelle QR code" style="width:96px;height:96px;background:#fff;padding:4px;border-radius:8px;border:1px solid var(--line);image-rendering:pixelated">' : '<span class="hint">No QR code shown.</span>') +
+          '<div class="stack" style="gap:6px"><button class="btn btn-ghost btn-sm" type="button" data-action="zelle-qr">' + (s.zelle_qr ? 'Replace QR code' : 'Upload QR code') + '</button>' +
+          (s.zelle_qr ? '<button class="linkish" style="justify-self:start" type="button" data-action="zelle-qr-remove">Remove QR code</button>' : '') + '</div></div>' +
+          '<span class="hint">Use the QR image from your bank app (Zelle, then "My QR code"). Check it shows the foundation&rsquo;s name before uploading.</span></div>' +
         f('email', 'Email address', '', 'type="email" maxlength="160"') +
         f('city', 'City', 'Shown in the footer.', 'maxlength="80"') +
       '</div><h3 style="margin-top:24px">Email alerts</h3><div class="stack">' +
@@ -961,6 +966,19 @@ input[type="range"]{padding:0;border:0;accent-color:var(--river)}
     'project-toggle': function(el){
       var pr = state.projects.find(function(x){ return String(x.id) === el.dataset.id; });
       call('PUT', '/api/admin/projects/' + pr.id, { published: !pr.published }).then(function(){ toast(pr.published ? 'Project hidden from the website' : 'Project shown on the website'); return refresh(); }).catch(fail);
+    },
+    'zelle-qr': function(){
+      pickFile(function(file){
+        if (!/^image\/(png|jpeg|webp|gif)$/.test(file.type)) { toast('Choose a PNG or JPG image of the QR code.', true); return; }
+        // Upload QR codes as they are: re-compressing can blur the squares.
+        call('POST', '/api/admin/upload', file, true)
+          .then(function(r){ return call('PUT', '/api/admin/settings', { zelle_qr: r.src }); })
+          .then(function(s){ state.settings = s; toast('QR code updated on the website'); render(); }).catch(fail);
+      });
+    },
+    'zelle-qr-remove': function(){
+      if (!confirm('Remove the Zelle QR code from the website?')) return;
+      call('PUT', '/api/admin/settings', { zelle_qr: '' }).then(function(s){ state.settings = s; toast('QR code removed'); render(); }).catch(fail);
     },
     'add-goal': function(){
       call('POST', '/api/admin/goals', { value: '0', label: 'New goal', kind: 'target' }).then(function(){ toast('Added. Type the number and what it counts.'); return refresh(); }).catch(fail);

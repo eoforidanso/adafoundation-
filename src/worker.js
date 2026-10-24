@@ -84,7 +84,7 @@ const TABLES = {
   },
 };
 
-const SETTINGS = { headline: 160, lede: 600, phone: 40, zelle: 40, email: 160, city: 80, alert_email: 300 };
+const SETTINGS = { headline: 160, lede: 600, phone: 40, zelle: 160, zelle_qr: 300, email: 160, city: 80, alert_email: 300 };
 
 export default {
   async fetch(req, env, ctx) {
@@ -472,6 +472,7 @@ async function saveSettings(req, env) {
     const v = String(body[key] ?? '').trim();
     if (v.length > max) return json({ error: `${key} is too long (${max} characters max).` }, 400);
     if (key === 'email' && v && !/^\S+@\S+\.\S+$/.test(v)) return json({ error: 'That email address does not look right.' }, 400);
+    if (key === 'zelle_qr' && v && !/^\/(media|images)\/[\w.\-]+$/.test(v)) return json({ error: 'That QR code image is not valid.' }, 400);
     if (key === 'alert_email' && v && v.split(',').some((a) => !/^\S+@\S+\.\S+$/.test(a.trim()))) {
       return json({ error: 'Check the alert addresses. Separate more than one with commas.' }, 400);
     }
@@ -675,6 +676,13 @@ async function renderHome(req, env) {
     .on('[data-slot="news-list"]', { element(el) { el.setInnerContent(newsHtml, html); } })
     .on('[data-slot="phone"]', set(settings.phone, (el) => el.setInnerContent(settings.phone)))
     .on('[data-slot="zelle"]', set(settings.zelle, (el) => el.setInnerContent(settings.zelle)))
+    .on('[data-slot="zelle-qr"]', {
+      element(el) {
+        if (!settings.zelle_qr) { el.setAttribute('hidden', ''); return; }
+        el.removeAttribute('hidden');
+      },
+    })
+    .on('[data-slot="zelle-qr-img"]', set(settings.zelle_qr, (el) => el.setAttribute('src', settings.zelle_qr)))
     .on('[data-slot="city"]', set(settings.city, (el) => el.setInnerContent(settings.city)))
     .on('[data-slot="email-text"]', set(settings.email, (el) => el.setInnerContent(settings.email)))
     .on('[data-slot="email"]', set(settings.email, (el) => { el.setAttribute('href', 'mailto:' + settings.email); el.setInnerContent(settings.email); }))
